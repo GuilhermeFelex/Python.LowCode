@@ -9,7 +9,6 @@ import { CodeVisualizer } from '@/components/visual-script/CodeVisualizer';
 import type { CanvasBlock } from '@/types/visual-script';
 import { AVAILABLE_BLOCKS, generatePythonCode } from '@/lib/visual-script-utils';
 import { useToast } from "@/hooks/use-toast";
-import { Play, Copy, Check, Download } from 'lucide-react';
 
 export default function VisualScriptPage() {
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasBlock[]>([]);
@@ -169,20 +168,21 @@ export default function VisualScriptPage() {
 
   return (
     <div className="flex h-screen max-h-screen overflow-hidden bg-background text-foreground">
-      <BlockPanel availableBlocks={AVAILABLE_BLOCKS} />
+      <BlockPanel 
+        availableBlocks={AVAILABLE_BLOCKS}
+        onSimulate={handleSimulate}
+        onCopyCode={handleCopyCode}
+        onSaveFile={handleSaveToFile}
+        isCodeCopied={copied}
+        isCodeVisualizerVisible={isCodeVisualizerVisible}
+        toggleCodeVisualizer={toggleCodeVisualizer}
+      />
       <MainCanvas
         canvasBlocks={canvasBlocks}
         availableBlocks={AVAILABLE_BLOCKS}
         onDrop={handleDrop}
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
-        isCodeVisualizerVisible={isCodeVisualizerVisible}
-        toggleCodeVisualizer={toggleCodeVisualizer}
-        generatedCode={generatedCode}
-        onSimulate={handleSimulate}
-        onCopyCode={handleCopyCode}
-        onSaveFile={handleSaveToFile}
-        isCodeCopied={copied}
       />
       {isCodeVisualizerVisible && <CodeVisualizer code={generatedCode} />}
     </div>
