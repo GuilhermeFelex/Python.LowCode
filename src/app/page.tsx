@@ -1,3 +1,4 @@
+
 // src/app/page.tsx
 "use client";
 
@@ -12,13 +13,14 @@ export default function VisualScriptPage() {
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasBlock[]>([]);
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isClient, setIsClient] = useState(false);
+  const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   useEffect(() => {
-    if (isClient) { // Ensure crypto is available if it were used directly in this effect
+    if (isClient) { 
       const code = generatePythonCode(canvasBlocks, AVAILABLE_BLOCKS);
       setGeneratedCode(code);
     }
@@ -26,10 +28,6 @@ export default function VisualScriptPage() {
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    // Do not stop propagation here if children need to handle drops,
-    // but for now, MainCanvas is the primary drop handler.
-    // event.stopPropagation(); 
-
     const blockId = event.dataTransfer.getData('blockId');
     const blockType = AVAILABLE_BLOCKS.find(b => b.id === blockId);
 
@@ -44,10 +42,9 @@ export default function VisualScriptPage() {
       instanceId: `block_${crypto.randomUUID()}`,
       blockTypeId: blockType.id,
       params: initialParams,
-      ...(blockType.canHaveChildren && { children: [] }), // Initialize children if block type supports it
+      ...(blockType.canHaveChildren && { children: [] }),
     };
 
-    // Determine if dropping into a child drop zone
     const targetElement = event.target as HTMLElement;
     const dropZoneElement = targetElement.closest('[data-is-drop-zone="true"]');
     const parentInstanceId = dropZoneElement?.getAttribute('data-instance-id');
@@ -62,7 +59,7 @@ export default function VisualScriptPage() {
                 return { ...b, children: [...(b.children || []), newBlock] };
               }
             }
-            if (b.children && b.children.length > 0) { // Check if children exist before mapping
+            if (b.children && b.children.length > 0) {
               return { ...b, children: addRecursive(b.children) };
             }
             return b;
@@ -71,7 +68,6 @@ export default function VisualScriptPage() {
         return addRecursive(prevBlocks);
       });
     } else {
-      // Dropping onto the main canvas (root level)
       setCanvasBlocks(prev => [...prev, newBlock]);
     }
   };
@@ -97,13 +93,16 @@ export default function VisualScriptPage() {
       return filteredBlocks.map(block => {
         if (block.children && block.children.length > 0) {
           const updatedChildren = removeRecursive(block.children);
-          // Ensure children array is present if it was defined, even if empty after removal
           return { ...block, children: block.children !== undefined ? updatedChildren : undefined };
         }
         return block;
       });
     };
     setCanvasBlocks(prev => removeRecursive(prev));
+  };
+
+  const toggleCodeVisualizer = () => {
+    setIsCodeVisualizerVisible(prev => !prev);
   };
 
   if (!isClient) {
@@ -115,12 +114,14 @@ export default function VisualScriptPage() {
       <BlockPanel availableBlocks={AVAILABLE_BLOCKS} />
       <MainCanvas
         canvasBlocks={canvasBlocks}
-        availableBlocks={AVAILABLE_BLOCKS} // Pass availableBlocks down
+        availableBlocks={AVAILABLE_BLOCKS}
         onDrop={handleDrop}
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
+        isCodeVisualizerVisible={isCodeVisualizerVisible}
+        toggleCodeVisualizer={toggleCodeVisualizer}
       />
-      <CodeVisualizer code={generatedCode} />
+      {isCodeVisualizerVisible && <CodeVisualizer code={generatedCode} />}
     </div>
   );
 }

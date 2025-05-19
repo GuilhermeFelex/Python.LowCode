@@ -1,3 +1,4 @@
+
 // src/components/visual-script/MainCanvas.tsx
 "use client";
 
@@ -6,22 +7,27 @@ import type { DragEvent } from 'react';
 import type { CanvasBlock, Block } from '@/types/visual-script';
 import { ScriptBlock } from './ScriptBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { SquareDashedMousePointer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { SquareDashedMousePointer, PanelRightClose, PanelRightOpen } from 'lucide-react';
 
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
-  availableBlocks: Block[]; // Added to pass to ScriptBlock
+  availableBlocks: Block[];
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
+  isCodeVisualizerVisible: boolean;
+  toggleCodeVisualizer: () => void;
 }
 
 export function MainCanvas({
   canvasBlocks,
-  availableBlocks, // Destructure
+  availableBlocks,
   onDrop,
   onParamChange,
   onRemoveBlock,
+  isCodeVisualizerVisible,
+  toggleCodeVisualizer,
 }: MainCanvasProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault(); 
@@ -30,17 +36,22 @@ export function MainCanvas({
 
   return (
     <main className="flex-1 h-full flex flex-col bg-background p-4 overflow-hidden">
-      <header className="pb-4">
-        <h1 className="text-2xl font-bold text-primary">Visual Script Canvas</h1>
-        <p className="text-sm text-muted-foreground">Construct your Python script by arranging blocks.</p>
+      <header className="pb-4 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-primary">Visual Script Canvas</h1>
+          <p className="text-sm text-muted-foreground">Construct your Python script by arranging blocks.</p>
+        </div>
+        <Button onClick={toggleCodeVisualizer} variant="outline" size="icon" aria-label={isCodeVisualizerVisible ? 'Hide Code Visualizer' : 'Show Code Visualizer'}>
+          {isCodeVisualizerVisible ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+        </Button>
       </header>
       <ScrollArea
         className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"
         onDragOver={handleDragOver}
-        onDrop={onDrop} // This onDrop is handleDrop from page.tsx
+        onDrop={onDrop}
         aria-label="Main script canvas"
       >
-        <div className="p-6 space-y-4 min-h-full"> {/* Ensured min-h-full for consistent drop target */}
+        <div className="p-6 space-y-4 min-h-full">
           {canvasBlocks.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
               <SquareDashedMousePointer className="w-12 h-12 mb-4 text-muted-foreground" />
@@ -59,8 +70,6 @@ export function MainCanvas({
                 isPaletteBlock={false}
                 onParamChange={onParamChange}
                 onRemove={onRemoveBlock}
-                // availableBlocks is needed by ScriptBlock for recursive rendering, but it's imported there now.
-                // If it wasn't imported, we would pass it: availableBlocks={availableBlocks}
               />
             );
           })}
