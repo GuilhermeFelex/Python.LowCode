@@ -43,7 +43,7 @@ export function MainCanvas({
         <div className="p-6 space-y-4 min-h-[200px]"> {/* Added min-h for better drop target visibility */}
           {canvasBlocks.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-              <SquareDashedMousePointer className="w-16 h-16 mb-4 text-muted-foreground" />
+              <SquareDashedMousePointer className="w-12 h-12 mb-4 text-muted-foreground" />
               <p className="text-lg">Drag blocks here to start building your script.</p>
               <p className="text-sm">Arrange them in the order you want them to execute.</p>
             </div>
