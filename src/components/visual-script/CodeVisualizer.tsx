@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Copy, Check } from 'lucide-react';
+import { Play, Copy, Check, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +46,31 @@ export function CodeVisualizer({ code }: CodeVisualizerProps) {
     });
   };
 
+  const handleSaveToFile = () => {
+    try {
+      const blob = new Blob([code], { type: 'text/python' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'visual_script.py';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "File Saved!",
+        description: "The Python code has been downloaded as visual_script.py.",
+      });
+    } catch (err) {
+      console.error('Failed to save file: ', err);
+      toast({
+        title: "Save Failed",
+        description: "Could not save the code to a file. See console for details.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Add a subtle transition effect when code changes
   const [displayCode, setDisplayCode] = useState(code);
   const [isFading, setIsFading] = useState(false);
@@ -79,6 +104,9 @@ export function CodeVisualizer({ code }: CodeVisualizerProps) {
           <Button onClick={handleCopyCode} variant="outline" size="sm" className="flex-1">
             {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Copy className="mr-2 h-4 w-4" />}
             {copied ? 'Copied!' : 'Copy Code'}
+          </Button>
+          <Button onClick={handleSaveToFile} variant="outline" size="sm" className="flex-1">
+            <Download className="mr-2 h-4 w-4" /> Save File
           </Button>
         </div>
       </CardContent>
