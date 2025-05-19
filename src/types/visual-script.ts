@@ -1,0 +1,27 @@
+import type { LucideProps } from 'lucide-react';
+import type React from 'react';
+
+export interface ParameterDefinition {
+  id: string;
+  name: string; // Changed from label to name for consistency
+  type: 'string' | 'number' | 'boolean'; // Add more types as needed
+  defaultValue: string;
+  placeholder?: string;
+}
+
+export interface Block {
+  id: string;
+  name: string;
+  description?: string;
+  icon: React.FC<LucideProps>;
+  parameters: ParameterDefinition[];
+  codeTemplate: (params: Record<string, string>) => string;
+  category: string; // e.g., "IO", "Logic", "Data"
+}
+
+export interface CanvasBlock {
+  instanceId: string;
+  blockTypeId: string;
+  params: Record<string, string>;
+  // Add x, y coordinates if implementing free-form canvas
+}
