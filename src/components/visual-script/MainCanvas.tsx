@@ -8,7 +8,7 @@ import type { CanvasBlock, Block } from '@/types/visual-script';
 import { ScriptBlock } from './ScriptBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { SquareDashedMousePointer, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { SquareDashedMousePointer, PanelRightClose, PanelRightOpen, Play, Copy, Check, Download } from 'lucide-react';
 
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
@@ -18,6 +18,11 @@ interface MainCanvasProps {
   onRemoveBlock: (instanceId: string) => void;
   isCodeVisualizerVisible: boolean;
   toggleCodeVisualizer: () => void;
+  generatedCode: string; // Added for button actions
+  onSimulate: () => void;
+  onCopyCode: () => void;
+  onSaveFile: () => void;
+  isCodeCopied: boolean;
 }
 
 export function MainCanvas({
@@ -28,6 +33,11 @@ export function MainCanvas({
   onRemoveBlock,
   isCodeVisualizerVisible,
   toggleCodeVisualizer,
+  generatedCode,
+  onSimulate,
+  onCopyCode,
+  onSaveFile,
+  isCodeCopied,
 }: MainCanvasProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault(); 
@@ -41,9 +51,21 @@ export function MainCanvas({
           <h1 className="text-2xl font-bold text-primary">Visual Script Canvas</h1>
           <p className="text-sm text-muted-foreground">Construct your Python script by arranging blocks.</p>
         </div>
-        <Button onClick={toggleCodeVisualizer} variant="outline" size="icon" aria-label={isCodeVisualizerVisible ? 'Hide Code Visualizer' : 'Show Code Visualizer'}>
-          {isCodeVisualizerVisible ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={onSimulate} variant="outline" size="sm">
+            <Play className="mr-2 h-4 w-4" /> Simulate
+          </Button>
+          <Button onClick={onCopyCode} variant="outline" size="sm">
+            {isCodeCopied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Copy className="mr-2 h-4 w-4" />}
+            {isCodeCopied ? 'Copied!' : 'Copy Code'}
+          </Button>
+          <Button onClick={onSaveFile} variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" /> Save File
+          </Button>
+          <Button onClick={toggleCodeVisualizer} variant="outline" size="icon" aria-label={isCodeVisualizerVisible ? 'Hide Code Visualizer' : 'Show Code Visualizer'}>
+            {isCodeVisualizerVisible ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+          </Button>
+        </div>
       </header>
       <ScrollArea
         className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"

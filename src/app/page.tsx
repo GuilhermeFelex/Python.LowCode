@@ -8,12 +8,16 @@ import { MainCanvas } from '@/components/visual-script/MainCanvas';
 import { CodeVisualizer } from '@/components/visual-script/CodeVisualizer';
 import type { CanvasBlock } from '@/types/visual-script';
 import { AVAILABLE_BLOCKS, generatePythonCode } from '@/lib/visual-script-utils';
+import { useToast } from "@/hooks/use-toast";
+import { Play, Copy, Check, Download } from 'lucide-react';
 
 export default function VisualScriptPage() {
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasBlock[]>([]);
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isClient, setIsClient] = useState(false);
   const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
@@ -105,6 +109,60 @@ export default function VisualScriptPage() {
     setIsCodeVisualizerVisible(prev => !prev);
   };
 
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedCode);
+      setCopied(true);
+      toast({
+        title: "Code Copied!",
+        description: "The Python code has been copied to your clipboard.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code: ', err);
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy code to clipboard. See console for details.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSimulate = () => {
+    console.log("--- Simulating Script Execution ---");
+    console.log(generatedCode);
+    console.log("--- Simulation End ---");
+    toast({
+      title: "Simulation Started",
+      description: "Check the browser console for simulated output.",
+    });
+  };
+
+  const handleSaveToFile = () => {
+    try {
+      const blob = new Blob([generatedCode], { type: 'text/python' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'visual_script.py';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "File Saved!",
+        description: "The Python code has been downloaded as visual_script.py.",
+      });
+    } catch (err) {
+      console.error('Failed to save file: ', err);
+      toast({
+        title: "Save Failed",
+        description: "Could not save the code to a file. See console for details.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!isClient) {
     return null; 
   }
@@ -120,6 +178,11 @@ export default function VisualScriptPage() {
         onRemoveBlock={handleRemoveBlock}
         isCodeVisualizerVisible={isCodeVisualizerVisible}
         toggleCodeVisualizer={toggleCodeVisualizer}
+        generatedCode={generatedCode}
+        onSimulate={handleSimulate}
+        onCopyCode={handleCopyCode}
+        onSaveFile={handleSaveToFile}
+        isCodeCopied={copied}
       />
       {isCodeVisualizerVisible && <CodeVisualizer code={generatedCode} />}
     </div>
