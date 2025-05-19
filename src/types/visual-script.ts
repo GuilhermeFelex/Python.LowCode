@@ -17,11 +17,13 @@ export interface Block {
   parameters: ParameterDefinition[];
   codeTemplate: (params: Record<string, string>) => string;
   category: string; // e.g., "IO", "Logic", "Data"
+  canHaveChildren?: boolean; // New property
 }
 
 export interface CanvasBlock {
   instanceId: string;
   blockTypeId: string;
   params: Record<string, string>;
+  children?: CanvasBlock[]; // New property for nested blocks
   // Add x, y coordinates if implementing free-form canvas
 }

@@ -10,7 +10,7 @@ import { SquareDashedMousePointer } from 'lucide-react';
 
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
-  availableBlocks: Block[];
+  availableBlocks: Block[]; // Added to pass to ScriptBlock
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
@@ -18,13 +18,13 @@ interface MainCanvasProps {
 
 export function MainCanvas({
   canvasBlocks,
-  availableBlocks,
+  availableBlocks, // Destructure
   onDrop,
   onParamChange,
   onRemoveBlock,
 }: MainCanvasProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault(); // Necessary to allow dropping
+    event.preventDefault(); 
     event.dataTransfer.dropEffect = 'move';
   };
 
@@ -35,12 +35,12 @@ export function MainCanvas({
         <p className="text-sm text-muted-foreground">Construct your Python script by arranging blocks.</p>
       </header>
       <ScrollArea
-        className="flex-1 border border-dashed rounded-lg bg-background transition-colors duration-200 hover:border-primary/50"
+        className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"
         onDragOver={handleDragOver}
-        onDrop={onDrop}
+        onDrop={onDrop} // This onDrop is handleDrop from page.tsx
         aria-label="Main script canvas"
       >
-        <div className="p-6 space-y-4 min-h-[200px]"> {/* Added min-h for better drop target visibility */}
+        <div className="p-6 space-y-4 min-h-full"> {/* Ensured min-h-full for consistent drop target */}
           {canvasBlocks.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
               <SquareDashedMousePointer className="w-12 h-12 mb-4 text-muted-foreground" />
@@ -50,7 +50,7 @@ export function MainCanvas({
           )}
           {canvasBlocks.map((canvasBlock) => {
             const blockDefinition = availableBlocks.find(b => b.id === canvasBlock.blockTypeId);
-            if (!blockDefinition) return null; // Should not happen if data is consistent
+            if (!blockDefinition) return null;
             return (
               <ScriptBlock
                 key={canvasBlock.instanceId}
@@ -59,6 +59,8 @@ export function MainCanvas({
                 isPaletteBlock={false}
                 onParamChange={onParamChange}
                 onRemove={onRemoveBlock}
+                // availableBlocks is needed by ScriptBlock for recursive rendering, but it's imported there now.
+                // If it wasn't imported, we would pass it: availableBlocks={availableBlocks}
               />
             );
           })}

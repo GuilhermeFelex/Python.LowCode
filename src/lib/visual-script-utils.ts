@@ -35,7 +35,8 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'count', name: 'Iterations', type: 'number', defaultValue: '5', placeholder: 'e.g., 10' },
       { id: 'loopVariable', name: 'Loop Variable', type: 'string', defaultValue: 'i', placeholder: 'e.g., i' },
     ],
-    codeTemplate: (params) => `for ${params.loopVariable} in range(${params.count}):\n    pass # Add blocks inside loop (not supported by simple generation)`,
+    canHaveChildren: true, // Allows nesting
+    codeTemplate: (params) => `for ${params.loopVariable} in range(${params.count}):`, // Children will be handled by generatePythonCode
   },
   {
     id: 'define_variable',
@@ -83,6 +84,34 @@ export const AVAILABLE_BLOCKS: Block[] = [
   },
 ];
 
+function generateCodeRecursive(blocks: CanvasBlock[], availableBlocks: Block[], indentLevel = 0): string[] {
+  const lines: string[] = [];
+  const indent = '    '.repeat(indentLevel);
+
+  blocks.forEach(canvasBlock => {
+    const blockDefinition = availableBlocks.find(b => b.id === canvasBlock.blockTypeId);
+    if (blockDefinition) {
+      try {
+        let generatedLine = blockDefinition.codeTemplate(canvasBlock.params);
+        lines.push(indent + generatedLine);
+
+        if (blockDefinition.canHaveChildren) {
+          if (canvasBlock.children && canvasBlock.children.length > 0) {
+            lines.push(...generateCodeRecursive(canvasBlock.children, availableBlocks, indentLevel + 1));
+          } else {
+            // Add 'pass' for empty control flow blocks like loops or if-statements
+            lines.push(indent + '    pass');
+          }
+        }
+      } catch (error) {
+        console.error("Error generating code for block:", blockDefinition, error);
+        lines.push(indent + `# Error generating code for block ${blockDefinition.name}`);
+      }
+    }
+  });
+  return lines;
+}
+
 export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks: Block[]): string {
   if (!canvasBlocks.length) {
     return '# Drag and drop blocks to generate Python code.';
@@ -94,18 +123,6 @@ export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks:
     ''
   ];
 
-  canvasBlocks.forEach(canvasBlock => {
-    const blockDefinition = availableBlocks.find(b => b.id === canvasBlock.blockTypeId);
-    if (blockDefinition) {
-      try {
-        const generatedLine = blockDefinition.codeTemplate(canvasBlock.params);
-        codeLines.push(generatedLine);
-      } catch (error) {
-        console.error("Error generating code for block:", blockDefinition, error);
-        codeLines.push(`# Error generating code for block ${blockDefinition.name}`);
-      }
-    }
-  });
-
+  codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0));
   return codeLines.join('\n');
 }
