@@ -45,6 +45,7 @@ export default function VisualScriptPage() {
       instanceId: `block_${crypto.randomUUID()}`,
       blockTypeId: blockType.id,
       params: initialParams,
+      isCollapsed: false, // Initialize as expanded
       ...(blockType.canHaveChildren && { children: [] }),
     };
 
@@ -102,6 +103,21 @@ export default function VisualScriptPage() {
       });
     };
     setCanvasBlocks(prev => removeRecursive(prev));
+  };
+
+  const handleToggleBlockCollapse = (instanceId: string) => {
+    const toggleRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
+      return blocks.map(block => {
+        if (block.instanceId === instanceId) {
+          return { ...block, isCollapsed: !block.isCollapsed };
+        }
+        if (block.children && block.children.length > 0) {
+          return { ...block, children: toggleRecursive(block.children) };
+        }
+        return block;
+      });
+    };
+    setCanvasBlocks(prev => toggleRecursive(prev));
   };
 
   const toggleCodeVisualizer = () => {
@@ -181,6 +197,7 @@ export default function VisualScriptPage() {
         onDrop={handleDrop}
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
+        onToggleBlockCollapse={handleToggleBlockCollapse}
         isCodeVisualizerVisible={isCodeVisualizerVisible}
         toggleCodeVisualizer={toggleCodeVisualizer}
       />

@@ -16,6 +16,7 @@ interface MainCanvasProps {
   onDrop: (event: DragEvent<HTMLDivElement>) => void;
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
+  onToggleBlockCollapse: (instanceId: string) => void;
   isCodeVisualizerVisible: boolean;
   toggleCodeVisualizer: () => void;
 }
@@ -26,6 +27,7 @@ export function MainCanvas({
   onDrop,
   onParamChange,
   onRemoveBlock,
+  onToggleBlockCollapse,
   isCodeVisualizerVisible,
   toggleCodeVisualizer,
 }: MainCanvasProps) {
@@ -45,7 +47,7 @@ export function MainCanvas({
           onClick={toggleCodeVisualizer} 
           variant="ghost" 
           size="icon" 
-          className="h-8 w-8 mt-1" // Adjusted size and margin for better alignment
+          className="h-8 w-8 mt-1" 
           aria-label={isCodeVisualizerVisible ? 'Hide Code Visualizer' : 'Show Code Visualizer'}
         >
           {isCodeVisualizerVisible ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
@@ -76,6 +78,7 @@ export function MainCanvas({
                 isPaletteBlock={false}
                 onParamChange={onParamChange}
                 onRemove={onRemoveBlock}
+                onToggleCollapse={onToggleBlockCollapse}
               />
             );
           })}

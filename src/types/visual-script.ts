@@ -25,5 +25,6 @@ export interface CanvasBlock {
   blockTypeId: string;
   params: Record<string, string>;
   children?: CanvasBlock[]; // New property for nested blocks
+  isCollapsed?: boolean; // New property for collapse state
   // Add x, y coordinates if implementing free-form canvas
 }
