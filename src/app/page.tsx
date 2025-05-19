@@ -174,8 +174,6 @@ export default function VisualScriptPage() {
         onCopyCode={handleCopyCode}
         onSaveFile={handleSaveToFile}
         isCodeCopied={copied}
-        isCodeVisualizerVisible={isCodeVisualizerVisible}
-        toggleCodeVisualizer={toggleCodeVisualizer}
       />
       <MainCanvas
         canvasBlocks={canvasBlocks}
@@ -183,6 +181,8 @@ export default function VisualScriptPage() {
         onDrop={handleDrop}
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
+        isCodeVisualizerVisible={isCodeVisualizerVisible}
+        toggleCodeVisualizer={toggleCodeVisualizer}
       />
       {isCodeVisualizerVisible && <CodeVisualizer code={generatedCode} />}
     </div>
