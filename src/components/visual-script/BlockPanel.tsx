@@ -57,14 +57,17 @@ export function BlockPanel({
 
   const initialOrFilteredOpenCategories = useMemo(() => {
     if (!searchTerm.trim()) {
+      // Default to all categories from the original availableBlocks list if no search term
       return Array.from(new Set(availableBlocks.map(block => block.category)));
     }
+    // If there is a search term, only include categories that have matching blocks
     return categories;
   }, [categories, searchTerm, availableBlocks]);
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(initialOrFilteredOpenCategories);
 
   useEffect(() => {
+    // Update open items when the search term changes or initial categories are determined
     setOpenAccordionItems(initialOrFilteredOpenCategories);
   }, [initialOrFilteredOpenCategories]);
 
@@ -120,7 +123,7 @@ export function BlockPanel({
         >
           {categories.map(category => {
             const blocksInCategory = filteredBlocks.filter(b => b.category === category);
-            if (blocksInCategory.length === 0) return null;
+            if (blocksInCategory.length === 0) return null; // Don't render category if no blocks match search
 
             return (
               <AccordionItem value={category} key={category} className="border-b-0 mb-2 last:mb-0">
