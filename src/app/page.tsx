@@ -17,9 +17,9 @@ export default function VisualScriptPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384); // Default w-96 (24rem * 16px/rem)
-  const minVisualizerWidth = 200; // Minimum width for the visualizer
-  const maxVisualizerWidth = 800; // Maximum width for the visualizer
+  const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384); 
+  const minVisualizerWidth = 200; 
+  const maxVisualizerWidth = 800; 
 
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
@@ -71,7 +71,7 @@ export default function VisualScriptPage() {
                 return {
                   ...block,
                   children: [...(block.children || []), newBlock],
-                  isCollapsed: false, 
+                  isCollapsed: false, // Ensure parent expands when child is added
                 };
               }
             }
@@ -86,6 +86,9 @@ export default function VisualScriptPage() {
         const updatedBlocks = addRecursive(prevBlocks);
 
         if (JSON.stringify(updatedBlocks) === originalBlocksJson) {
+          // If parentInstanceId was set, it means a specific child drop zone was targeted.
+          // If addRecursive didn't change anything, it means the block wasn't added to that child.
+          // We should not add it to the root in this case. We just return the original blocks.
           if (!dropZone) { 
              return [...prevBlocks, newBlock];
           }
@@ -94,6 +97,7 @@ export default function VisualScriptPage() {
         return updatedBlocks;
       });
     } else {
+      // No parentInstanceId means the drop was on the main canvas background.
       setCanvasBlocks(prevBlocks => [...prevBlocks, newBlock]);
     }
   };
@@ -219,7 +223,7 @@ export default function VisualScriptPage() {
     const handleMouseMove = (event: MouseEvent) => {
         if (!isResizing.current) return;
         const dx = event.clientX - dragStartX.current;
-        let newWidth = dragStartWidth.current - dx; // Corrected logic for resizing
+        let newWidth = dragStartWidth.current - dx; // My fix for the resize direction.
         newWidth = Math.max(minVisualizerWidth, Math.min(newWidth, maxVisualizerWidth));
         setCodeVisualizerWidth(newWidth);
     };

@@ -36,8 +36,8 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'count', name: 'Iterations', type: 'number', defaultValue: '5', placeholder: 'e.g., 10' },
       { id: 'loopVariable', name: 'Loop Variable', type: 'string', defaultValue: 'i', placeholder: 'e.g., i' },
     ],
-    canHaveChildren: true, // Allows nesting
-    codeTemplate: (params) => `for ${params.loopVariable} in range(${params.count}):`, // Children will be handled by generatePythonCode
+    canHaveChildren: true, 
+    codeTemplate: (params) => `for ${params.loopVariable} in range(${params.count}):`, 
   },
   {
     id: 'define_variable',
@@ -79,7 +79,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
         type: 'textarea', 
         defaultValue: '', 
         placeholder: '{\n  "key": "value"\n}',
-        condition: { paramId: 'method', paramValue: ['POST', 'PUT', 'PATCH'] } // Show only for these methods
+        condition: { paramId: 'method', paramValue: ['POST', 'PUT', 'PATCH'] } 
       },
       {
         id: 'authType',
@@ -137,7 +137,6 @@ export const AVAILABLE_BLOCKS: Block[] = [
         `simulated_body_payload = None`,
       ];
       
-      // Process Headers
       if (rawHeaders) {
         codeLines.push(`# Processing provided headers:`);
         codeLines.push(`raw_headers_str = """${rawHeaders}"""`);
@@ -147,7 +146,6 @@ export const AVAILABLE_BLOCKS: Block[] = [
         codeLines.push(`        simulated_headers[key.strip()] = value.strip()`);
       }
 
-      // Process Authentication
       if (authType === 'Bearer Token' && authToken) {
         codeLines.push(`# Authentication: Bearer Token`);
         codeLines.push(`simulated_headers['Authorization'] = f"Bearer ${authToken}"`);
@@ -156,7 +154,6 @@ export const AVAILABLE_BLOCKS: Block[] = [
         codeLines.push(`simulated_auth = ('${authUser}', '${authPass}')`);
       }
       
-      // Process Body for relevant methods
       const bodyRelevantMethods = ['POST', 'PUT', 'PATCH'];
       if (bodyRelevantMethods.includes(method.toUpperCase()) && body) {
         codeLines.push(`# Request Body for ${method}:`);
@@ -167,17 +164,15 @@ export const AVAILABLE_BLOCKS: Block[] = [
         codeLines.push(`simulated_body_payload = """${body}""" # As a string for simulation`);
       }
       
-      // Construct simulated request call
       codeLines.push(`\n# Simulating the HTTP request:`);
       let reqArgs = [`"${url}"`];
-      if (Object.keys(params).includes('headers') || authType === 'Bearer Token') { // Check if headers param exists or Bearer token to include headers arg
+      if (Object.keys(params).includes('headers') || authType === 'Bearer Token') { // I add the 'headers' arg to the request if actual headers are given or if it's Bearer auth.
         reqArgs.push(`headers=simulated_headers`);
       }
       if (authType === 'Basic Auth' && authUser && authPass) {
         reqArgs.push(`auth=simulated_auth`);
       }
       if (bodyRelevantMethods.includes(method.toUpperCase()) && body) {
-        // Assuming JSON for simplicity in requests call, 'data' for other types
         codeLines.push(`# For JSON, use 'json=simulated_body_payload' if it's a dict. For raw string, use 'data=simulated_body_payload'.`);
         reqArgs.push(`data=simulated_body_payload # Example with data, adjust for json if parsed to dict`);
       }
@@ -226,7 +221,6 @@ function generateCodeRecursive(blocks: CanvasBlock[], availableBlocks: Block[], 
     const blockDefinition = availableBlocks.find(b => b.id === canvasBlock.blockTypeId);
     if (blockDefinition) {
       try {
-        // Split multiline templates and indent each line
         const generatedBlockCode = blockDefinition.codeTemplate(canvasBlock.params);
         generatedBlockCode.split('\n').forEach(line => {
           lines.push(indent + line);
@@ -236,7 +230,6 @@ function generateCodeRecursive(blocks: CanvasBlock[], availableBlocks: Block[], 
           if (canvasBlock.children && canvasBlock.children.length > 0) {
             lines.push(...generateCodeRecursive(canvasBlock.children, availableBlocks, indentLevel + 1));
           } else {
-            // Add 'pass' for empty control flow blocks like loops or if-statements
             lines.push(indent + '    pass');
           }
         }
@@ -263,3 +256,4 @@ export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks:
   codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0));
   return codeLines.join('\n');
 }
+

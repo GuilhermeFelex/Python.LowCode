@@ -12,7 +12,7 @@ import { SquareDashedMousePointer } from 'lucide-react';
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
   availableBlocks: Block[];
-  onBlockDrop: (event: DragEvent<HTMLDivElement>) => void; // Reverted signature
+  onBlockDrop: (event: DragEvent<HTMLDivElement>) => void; 
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
   onToggleBlockCollapse: (instanceId: string) => void;
@@ -77,8 +77,8 @@ export function MainCanvas({
                 onRemove={onRemoveBlock}
                 onToggleCollapse={onToggleBlockCollapse}
                 onBlockDrop={onBlockDrop} // Pass main onBlockDrop for child drop zones
-                // parentId prop removed
               />
+              // As a note, I've removed the parentId prop from ScriptBlock's props; it's no longer passed down here.
             );
           })}
         </div>
@@ -86,3 +86,4 @@ export function MainCanvas({
     </main>
   );
 }
+
