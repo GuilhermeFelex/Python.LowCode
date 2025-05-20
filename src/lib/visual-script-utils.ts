@@ -1,6 +1,6 @@
 
 import type { Block, CanvasBlock } from '@/types/visual-script';
-import { Terminal, FileText, Repeat, Puzzle, Webhook, FunctionSquare, Variable } from 'lucide-react';
+import { Terminal, FileText, Repeat, Puzzle, Webhook, FunctionSquare, Variable, MousePointerSquareDashed, Database, FileUp, FileDown, ScanText } from 'lucide-react';
 
 // Helper function to determine if a string is a valid number
 function isNumeric(str: string): boolean {
@@ -44,8 +44,6 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'filePath', name: 'File Path', type: 'string', defaultValue: './my_file.txt', placeholder: 'e.g., /path/to/file.txt or variable' },
       { id: 'variableName', name: 'Store in Variable', type: 'string', defaultValue: 'file_content', placeholder: 'Variable name' },
     ],
-    // params.filePath will be pre-processed to be either a variable name or a quoted string
-    // params.variableName is a raw string for the variable identifier
     codeTemplate: (params) => `${params.variableName} = open(${params.filePath}, "r").read()`,
   },
   {
@@ -59,7 +57,6 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'loopVariable', name: 'Loop Variable', type: 'string', defaultValue: 'i', placeholder: 'e.g., i' },
     ],
     canHaveChildren: true,
-    // params.count is pre-processed (var or number literal), params.loopVariable is raw
     codeTemplate: (params) => `for ${params.loopVariable} in range(${params.count}):`,
   },
   {
@@ -72,7 +69,6 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'variableName', name: 'Variable Name', type: 'string', defaultValue: 'my_var', placeholder: 'e.g., age' },
       { id: 'value', name: 'Value', type: 'string', defaultValue: '""', placeholder: 'e.g., "John", 42, or other_variable' },
     ],
-    // params.variableName is raw, params.value is pre-processed (var, number literal, or string literal)
     codeTemplate: (params) => `${params.variableName} = ${params.value}`,
   },
   {
@@ -119,7 +115,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
       {
         id: 'authToken',
         name: 'Bearer Token',
-        type: 'password', // Treated as string for variable check
+        type: 'password',
         defaultValue: '',
         placeholder: 'Enter Bearer Token or variable name',
         condition: { paramId: 'authType', paramValue: 'Bearer Token' }
@@ -135,7 +131,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
       {
         id: 'authBasicPass',
         name: 'Basic Auth Password',
-        type: 'password', // Treated as string for variable check
+        type: 'password',
         defaultValue: '',
         placeholder: 'Enter Password or variable name',
         condition: { paramId: 'authType', paramValue: 'Basic Auth' }
@@ -143,19 +139,12 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'responseVariable', name: 'Store Response In', type: 'string', defaultValue: 'response_data', placeholder: 'Variable name' },
     ],
     codeTemplate: (params) => {
-      // params are pre-processed. e.g. params.url is either `my_url_var` or `"https://literal.com"`
-      // params.method is a quoted string like `"GET"`
-      // params.headers is `my_headers_var` or `"""multiline literal"""`
-      // params.body is `my_body_var` or `"""multiline literal"""` or `None` (if not applicable)
-      // params.responseVariable is a raw variable name string.
-
-      const method = params.method.replace(/"/g, ''); // Unquote method for use in f-string or direct call
-      const responseVar = params.responseVariable; // This is a raw variable name
+      const method = params.method.replace(/"/g, ''); 
+      const responseVar = params.responseVariable; 
 
       let codeLines = [
-        `# HTTP Request Block`,
-        `# Ensure 'requests' library is installed: pip install requests`,
-        `import requests  # Make sure to uncomment if you run this code`,
+        `# HTTP Request Block - Ensure 'requests' library is installed: pip install requests`,
+        `# import requests # Uncomment if you run this code`,
         ``,
         `_url = ${params.url}`,
         `_headers = {}`,
@@ -165,7 +154,6 @@ export const AVAILABLE_BLOCKS: Block[] = [
         ``,
       ];
 
-      // Handle headers: params.headers is either a variable name or a """multiline string"""
       codeLines.push(`# Processing Headers:`);
       codeLines.push(`_raw_headers_input = ${params.headers}`);
       codeLines.push(`if isinstance(_raw_headers_input, dict):`);
@@ -178,7 +166,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
       codeLines.push(``);
 
 
-      const authType = params.authType.replace(/"/g, ''); // Unquote
+      const authType = params.authType.replace(/"/g, '');
       if (authType === 'Bearer Token') {
         codeLines.push(`# Authentication: Bearer Token`);
         codeLines.push(`_bearer_token = ${params.authToken}`);
@@ -194,12 +182,8 @@ export const AVAILABLE_BLOCKS: Block[] = [
       const bodyRelevantMethods = ['POST', 'PUT', 'PATCH'];
       if (bodyRelevantMethods.includes(method.toUpperCase())) {
         codeLines.push(`# Request Body for ${method}:`);
-        codeLines.push(`_raw_body_input = ${params.body}`);
-        codeLines.push(`_body_payload = _raw_body_input # Assumes it's a string or already a dict/None if variable`);
-        codeLines.push(`# For actual use with requests, if _body_payload is a JSON string, you might want:`);
-        codeLines.push(`# import json`);
-        codeLines.push(`# try: _body_payload = json.loads(_raw_body_input)`);
-        codeLines.push(`# except json.JSONDecodeError: pass # keep as string if not valid JSON`);
+        codeLines.push(`_raw_body_input = ${params.body}`); // params.body is pre-processed
+        codeLines.push(`_body_payload = _raw_body_input`);
         codeLines.push(``);
       }
 
@@ -211,24 +195,19 @@ export const AVAILABLE_BLOCKS: Block[] = [
       }
 
       if (bodyRelevantMethods.includes(method.toUpperCase())) {
-        codeLines.push(`# For JSON, use 'json=_body_payload' if it's a dict. For raw string, use 'data=_body_payload'.`);
-        codeLines.push(`# This example uses 'data' assuming string body or form data.`);
         reqArgs.push(`data=_body_payload`);
       }
 
-      codeLines.push(`${responseVar} = "--- SIMULATED RESPONSE ---" # Placeholder for actual request result`);
+      codeLines.push(`${responseVar} = "--- SIMULATED RESPONSE ---" # Placeholder`);
       codeLines.push(`# try:`);
       codeLines.push(`#     response = requests.request(method=_method_str, ${reqArgs.join(', ')})`);
-      codeLines.push(`#     response.raise_for_status() # Raise an exception for HTTP errors`);
-      codeLines.push(`#     # Process response: response.json(), response.text, response.content`);
-      codeLines.push(`#     ${responseVar} = response.text # Example: store text response`);
+      codeLines.push(`#     response.raise_for_status()`);
+      codeLines.push(`#     ${responseVar} = response.text`);
       codeLines.push(`# except requests.exceptions.RequestException as e:`);
       codeLines.push(`#     ${responseVar} = f"Error: {e}"`);
       codeLines.push(`#     print(${responseVar})`);
       codeLines.push(``);
-      codeLines.push(`print(f"Simulated {method} to {_url}")`);
-      codeLines.push(`print(f"Response (simulated) stored in: ${responseVar}")`);
-      codeLines.push(`print(f"Value of ${responseVar}: {${responseVar}}")`);
+      codeLines.push(`print(f"Simulated {method} to {_url}. Response in ${responseVar}: {{${responseVar}}}")`);
 
       return codeLines.join('\n');
     },
@@ -245,15 +224,130 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'outputVar', name: 'Store Result In (optional)', type: 'string', defaultValue: '', placeholder: 'result_variable' },
     ],
     codeTemplate: (params) => {
-      // params.functionName is pre-processed. params.args is a string that needs to be used as is.
-      // params.outputVar is a raw variable name.
-      const args = params.args ? params.args.replace(/"/g, '') : ''; // Use raw args string. User must quote literals.
+      const args = params.args ? params.args : ''; 
       const funcCall = `${params.functionName}(${args})`;
       if (params.outputVar) {
         return `${params.outputVar} = ${funcCall}`;
       }
       return funcCall;
     }
+  },
+  // PyAutoGUI Blocks
+  {
+    id: 'pyautogui_move_to',
+    name: 'Move Mouse',
+    description: 'Moves the mouse cursor to the specified X and Y coordinates.',
+    icon: MousePointerSquareDashed,
+    category: 'GUI Automation (PyAutoGUI)',
+    parameters: [
+      { id: 'x_coord', name: 'X Coordinate', type: 'number', defaultValue: '100', placeholder: 'e.g., 100 or var_x' },
+      { id: 'y_coord', name: 'Y Coordinate', type: 'number', defaultValue: '100', placeholder: 'e.g., 100 or var_y' },
+      { id: 'duration', name: 'Duration (seconds)', type: 'number', defaultValue: '0.25', placeholder: 'e.g., 0.5 or var_duration' },
+    ],
+    codeTemplate: (params) => `# Ensure 'pyautogui' is installed: pip install pyautogui\n# import pyautogui # Uncomment\npyautogui.moveTo(${params.x_coord}, ${params.y_coord}, duration=${params.duration})`,
+  },
+  {
+    id: 'pyautogui_click',
+    name: 'Click Mouse',
+    description: 'Performs a mouse click at the current or specified coordinates.',
+    icon: MousePointerSquareDashed,
+    category: 'GUI Automation (PyAutoGUI)',
+    parameters: [
+      { id: 'x_coord', name: 'X Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_x (blank for current)' },
+      { id: 'y_coord', name: 'Y Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_y (blank for current)' },
+      { id: 'button', name: 'Button', type: 'select', defaultValue: 'left', options: [
+          { value: 'left', label: 'Left' }, { value: 'right', label: 'Right' }, { value: 'middle', label: 'Middle' }
+        ]
+      },
+    ],
+    codeTemplate: (params) => {
+      const x = params.x_coord && params.x_coord !== '""' ? `x=${params.x_coord}` : '';
+      const y = params.y_coord && params.y_coord !== '""' ? `y=${params.y_coord}` : '';
+      const clickArgs = [x,y, `button=${params.button}`].filter(Boolean).join(', ');
+      return `# Ensure 'pyautogui' is installed: pip install pyautogui\n# import pyautogui # Uncomment\npyautogui.click(${clickArgs})`;
+    },
+  },
+  {
+    id: 'pyautogui_typewrite',
+    name: 'Type Text',
+    description: 'Types the given string of characters.',
+    icon: ScanText, 
+    category: 'GUI Automation (PyAutoGUI)',
+    parameters: [
+      { id: 'text_to_type', name: 'Text to Type', type: 'string', defaultValue: 'Hello!', placeholder: 'Enter text or variable name' },
+      { id: 'interval', name: 'Interval (sec, per char)', type: 'number', defaultValue: '0.1', placeholder: 'e.g., 0.05 or var_interval' },
+    ],
+    codeTemplate: (params) => `# Ensure 'pyautogui' is installed: pip install pyautogui\n# import pyautogui # Uncomment\npyautogui.typewrite(${params.text_to_type}, interval=${params.interval})`,
+  },
+  {
+    id: 'pyautogui_screenshot',
+    name: 'Take Screenshot',
+    description: 'Takes a screenshot and saves it to a file, or stores it in a variable.',
+    icon: Puzzle, // Using a generic icon
+    category: 'GUI Automation (PyAutoGUI)',
+    parameters: [
+      { id: 'filename', name: 'Filename (optional)', type: 'string', defaultValue: 'screenshot.png', placeholder: 'e.g., my_screenshot.png or var (blank to not save)' },
+      { id: 'variableName', name: 'Store Image In (optional)', type: 'string', defaultValue: '', placeholder: 'Variable name for image object' },
+    ],
+    codeTemplate: (params) => {
+      let code = `# Ensure 'pyautogui' is installed: pip install pyautogui\n# import pyautogui # Uncomment\n`;
+      const filenameParam = params.filename === '""' ? '' : params.filename; // Handle empty string case
+      if (params.variableName) {
+        code += `${params.variableName} = pyautogui.screenshot(${filenameParam ? filenameParam : ''})\n`;
+        code += `print(f"Screenshot taken and stored in variable '${params.variableName}'.")\n`;
+        if (filenameParam) {
+          code += `print(f"Also saved to file: {${filenameParam}}")`;
+        }
+      } else if (filenameParam) {
+        code += `pyautogui.screenshot(${filenameParam})\n`;
+        code += `print(f"Screenshot saved to file: {${filenameParam}}")`;
+      } else {
+        code += `pyautogui.screenshot()\n`;
+        code += `print("Screenshot taken (not saved to file or variable).")`;
+      }
+      return code;
+    },
+  },
+  // Pandas Blocks
+  {
+    id: 'pandas_read_csv',
+    name: 'Read CSV (Pandas)',
+    description: 'Reads a CSV file into a Pandas DataFrame.',
+    icon: FileDown,
+    category: 'Data Manipulation (Pandas)',
+    parameters: [
+      { id: 'filePath', name: 'File Path', type: 'string', defaultValue: 'data.csv', placeholder: 'e.g., /path/to/data.csv or var' },
+      { id: 'variableName', name: 'Store DataFrame In', type: 'string', defaultValue: 'df', placeholder: 'Variable name for DataFrame' },
+    ],
+    codeTemplate: (params) => `# Ensure 'pandas' is installed: pip install pandas\n# import pandas as pd # Uncomment\n${params.variableName} = pd.read_csv(${params.filePath})\nprint(f"CSV file {${params.filePath}} loaded into DataFrame '${params.variableName}'.")`,
+  },
+  {
+    id: 'pandas_to_csv',
+    name: 'DataFrame to CSV (Pandas)',
+    description: 'Writes a Pandas DataFrame to a CSV file.',
+    icon: FileUp,
+    category: 'Data Manipulation (Pandas)',
+    parameters: [
+      { id: 'dataFrameVariable', name: 'DataFrame Variable', type: 'string', defaultValue: 'df', placeholder: 'Name of DataFrame variable' },
+      { id: 'filePath', name: 'Output File Path', type: 'string', defaultValue: 'output.csv', placeholder: 'e.g., /path/to/output.csv or var' },
+      { id: 'includeIndex', name: 'Include Index', type: 'select', defaultValue: 'False', options: [
+          { value: 'True', label: 'Yes' }, { value: 'False', label: 'No' }
+        ]
+      },
+    ],
+    codeTemplate: (params) => `# Ensure 'pandas' is installed: pip install pandas\n# import pandas as pd # Uncomment\n${params.dataFrameVariable}.to_csv(${params.filePath}, index=${params.includeIndex})\nprint(f"DataFrame '${params.dataFrameVariable}' saved to CSV file {${params.filePath}}.")`,
+  },
+  {
+    id: 'pandas_df_head',
+    name: 'Show DataFrame Head (Pandas)',
+    description: 'Prints the first n rows of a DataFrame.',
+    icon: Database,
+    category: 'Data Manipulation (Pandas)',
+    parameters: [
+      { id: 'dataFrameVariable', name: 'DataFrame Variable', type: 'string', defaultValue: 'df', placeholder: 'Name of DataFrame variable' },
+      { id: 'numRows', name: 'Number of Rows', type: 'number', defaultValue: '5', placeholder: 'e.g., 5 or var_rows' },
+    ],
+    codeTemplate: (params) => `# Ensure 'pandas' is installed: pip install pandas\n# import pandas as pd # Uncomment\nprint(f"First {${params.numRows}} rows of DataFrame '${params.dataFrameVariable}':")\nprint(${params.dataFrameVariable}.head(${params.numRows}))`,
   },
 ];
 
@@ -265,7 +359,6 @@ function generateCodeRecursive(
 ): string[] {
   const lines: string[] = [];
   const indent = '    '.repeat(indentLevel);
-  // Create a new set for this scope to not affect sibling scopes at higher levels
   let blockScopedDefinedVariables = new Set(currentDefinedVariables);
 
   blocks.forEach(canvasBlock => {
@@ -273,16 +366,40 @@ function generateCodeRecursive(
     if (blockDefinition) {
       const processedParams: Record<string, string> = {};
 
-      // Pre-process parameters
       for (const paramDef of blockDefinition.parameters) {
         const paramId = paramDef.id;
-        // For variableName parameters (like in define_variable, read_file, loop_range), we want the raw user input.
-        if (paramId === 'variableName' || paramId === 'loopVariable' || paramId === 'responseVariable' || paramId === 'outputVar') {
-          processedParams[paramId] = canvasBlock.params[paramId] ?? paramDef.defaultValue;
+        const rawValue = canvasBlock.params[paramId] ?? paramDef.defaultValue;
+
+        if (paramId === 'variableName' || paramId === 'loopVariable' || paramId === 'responseVariable' || paramId === 'outputVar' || paramId === 'dataFrameVariable') {
+          processedParams[paramId] = rawValue;
           continue;
         }
         
-        const rawValue = canvasBlock.params[paramId] ?? paramDef.defaultValue;
+        // Special handling for pyautogui_click optional coordinates - allow empty string to mean None
+        if (blockDefinition.id === 'pyautogui_click' && (paramId === 'x_coord' || paramId === 'y_coord')) {
+            if (rawValue.trim() === '' || rawValue === '""') {
+                 processedParams[paramId] = '""'; // Will be handled in template to convert to None or omit
+            } else if (blockScopedDefinedVariables.has(rawValue)) {
+                processedParams[paramId] = rawValue;
+            } else if (isNumeric(rawValue)) {
+                 processedParams[paramId] = rawValue;
+            } else {
+                 processedParams[paramId] = formatPythonStringLiteral(rawValue);
+            }
+            continue;
+        }
+         // Special handling for pyautogui_screenshot filename - allow empty for no save
+        if (blockDefinition.id === 'pyautogui_screenshot' && paramId === 'filename') {
+           if (rawValue.trim() === '' || rawValue === '""') {
+             processedParams[paramId] = '""'; // Represents no file, handled in template
+           } else if (blockScopedDefinedVariables.has(rawValue)) {
+             processedParams[paramId] = rawValue;
+           } else {
+             processedParams[paramId] = formatPythonStringLiteral(rawValue);
+           }
+           continue;
+        }
+
 
         if (blockDefinition.id === 'define_variable' && paramId === 'value') {
           if (blockScopedDefinedVariables.has(rawValue)) {
@@ -293,11 +410,9 @@ function generateCodeRecursive(
             processedParams[paramId] = formatPythonStringLiteral(rawValue);
           }
         } else if (paramDef.type === 'textarea') {
-          // For textareas, if the exact content is a variable name, use it. Otherwise, treat as multiline string.
           if (blockScopedDefinedVariables.has(rawValue.trim())) {
              processedParams[paramId] = rawValue.trim();
           } else {
-            // Check if body is applicable for HTTP request
             if (blockDefinition.id === 'http_request' && paramId === 'body') {
                 const methodParam = blockDefinition.parameters.find(p => p.id === 'method');
                 const currentMethod = (canvasBlock.params[methodParam!.id] ?? methodParam!.defaultValue).toUpperCase();
@@ -305,39 +420,37 @@ function generateCodeRecursive(
                 if (bodyRelevantMethods.includes(currentMethod)) {
                     processedParams[paramId] = formatPythonMultilineStringLiteral(rawValue);
                 } else {
-                    processedParams[paramId] = "None"; // Body not applicable
+                    processedParams[paramId] = "None"; 
                 }
             } else {
                  processedParams[paramId] = formatPythonMultilineStringLiteral(rawValue);
             }
           }
         } else if (blockScopedDefinedVariables.has(rawValue)) {
-          // If the rawValue matches a defined variable, use the variable name directly
           processedParams[paramId] = rawValue;
         } else {
-          // Otherwise, treat as a literal value based on its type
           if (paramDef.type === 'string' || paramDef.type === 'password' || paramDef.type === 'select') {
             processedParams[paramId] = formatPythonStringLiteral(rawValue);
           } else if (paramDef.type === 'number') {
             if (isNumeric(rawValue)) {
-              processedParams[paramId] = rawValue; // It's a number literal
+              processedParams[paramId] = rawValue; 
             } else {
-              // Non-numeric value for a number field, could be an error or intended string, quote it.
+              // If not numeric, treat as string, as it might be a variable placeholder for a number.
+              // The template should then handle this, or an error would occur in Python.
+              // For now, we will stringify it to avoid direct Python errors from non-quoted non-numbers.
+              // Ideally, a more robust type checking or variable resolution would occur.
               processedParams[paramId] = formatPythonStringLiteral(rawValue);
             }
           } else {
-            // Fallback for other types (e.g. boolean, though not explicitly handled here)
-            // Safest to treat as a string if unsure, or handle specific types
             processedParams[paramId] = formatPythonStringLiteral(rawValue);
           }
         }
       }
       
-      // For custom_function 'args' parameter, it's a raw string from user, not to be quoted entirely
       if (blockDefinition.id === 'custom_function' && processedParams.args) {
-        // The user is responsible for quoting string literals within the args string, e.g., "str_val", var_name, 123
-        // We just pass it through. The template handles it.
-        // However, `canvasBlock.params.args` should be used directly if present
+         // For custom_function args, we want to pass the raw string as user typed it,
+         // as it might contain multiple arguments, some variables, some literals.
+         // The template itself doesn't need further processing of this specific 'args' field.
          processedParams.args = canvasBlock.params.args ?? blockDefinition.parameters.find(p=>p.id === 'args')!.defaultValue;
       }
 
@@ -348,26 +461,25 @@ function generateCodeRecursive(
           lines.push(indent + line);
         });
 
+        // Register defined variables for scope
         if (blockDefinition.id === 'define_variable') {
           const varName = canvasBlock.params.variableName;
-          if (varName) {
-            blockScopedDefinedVariables.add(varName.trim());
-          }
+          if (varName) blockScopedDefinedVariables.add(varName.trim());
         } else if (blockDefinition.id === 'read_file') {
           const varName = canvasBlock.params.variableName;
-           if (varName) {
-            blockScopedDefinedVariables.add(varName.trim());
-          }
+           if (varName) blockScopedDefinedVariables.add(varName.trim());
         } else if (blockDefinition.id === 'http_request') {
           const varName = canvasBlock.params.responseVariable;
-           if (varName) {
-            blockScopedDefinedVariables.add(varName.trim());
-          }
+           if (varName) blockScopedDefinedVariables.add(varName.trim());
         } else if (blockDefinition.id === 'custom_function' && canvasBlock.params.outputVar) {
            const varName = canvasBlock.params.outputVar;
-           if (varName) {
-            blockScopedDefinedVariables.add(varName.trim());
-          }
+           if (varName) blockScopedDefinedVariables.add(varName.trim());
+        } else if (blockDefinition.id === 'pyautogui_screenshot' && canvasBlock.params.variableName) {
+            const varName = canvasBlock.params.variableName;
+            if (varName) blockScopedDefinedVariables.add(varName.trim());
+        } else if (blockDefinition.id === 'pandas_read_csv') {
+            const varName = canvasBlock.params.variableName;
+            if (varName) blockScopedDefinedVariables.add(varName.trim());
         }
 
 
@@ -379,7 +491,7 @@ function generateCodeRecursive(
           }
         }
       } catch (error) {
-        // My fix: provide more context on error
+        // Eu corrigi aqui para fornecer mais contexto sobre o erro
         console.error("Error generating code for block:", blockDefinition.name, "Instance:", canvasBlock.instanceId, "Params:", processedParams, "Error:", error);
         lines.push(indent + `# Error generating code for block ${blockDefinition.name} (ID: ${canvasBlock.instanceId})`);
       }
@@ -395,11 +507,12 @@ export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks:
 
   const codeLines: string[] = [
     '# Visual Script Generated Code',
-    '# Note: Some blocks might require specific libraries (e.g., requests for HTTP).',
+    '# Note: Some blocks might require specific libraries (e.g., requests for HTTP, pyautogui, pandas).',
+    '# Make sure to install them using pip: pip install requests pyautogui pandas',
     ''
   ];
 
-  // Initialize with an empty set for top-level defined variables
   codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0, new Set<string>()));
   return codeLines.join('\n');
 }
+
