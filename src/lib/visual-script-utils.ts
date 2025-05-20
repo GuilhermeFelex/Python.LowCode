@@ -198,12 +198,22 @@ export const AVAILABLE_BLOCKS: Block[] = [
         // For POST/PUT/PATCH, requests library uses 'data' for form-encoded, 'json' for dicts.
         // We'll assume _body_payload could be a string (like JSON string) or a dict.
         // The template simplifies this by just passing it to 'data'. User needs to ensure format.
-        codeLines.push(`data=_body_payload`);
+        codeLines.push(`data=_body_payload`); // This should be part of the requests.request call arguments
       }
+      
+      // Correctly assemble the arguments for requests.request
+      let finalReqArgsString = `method=_method_str, url=_url, headers=_headers`;
+      if (authType === 'Basic Auth') {
+        finalReqArgsString += `, auth=_auth`;
+      }
+      if (bodyRelevantMethods.includes(method.toUpperCase()) && params.body.trim() !== '""' && params.body.trim() !== "''''''" && params.body.trim() !== 'None') {
+        finalReqArgsString += `, data=_body_payload`;
+      }
+
 
       codeLines.push(`${responseVar} = "--- SIMULATED RESPONSE ---" # Placeholder`);
       codeLines.push(`# try:`);
-      codeLines.push(`#     response = requests.request(method=_method_str, ${reqArgs.join(', ')})`);
+      codeLines.push(`#     response = requests.request(${finalReqArgsString})`);
       codeLines.push(`#     response.raise_for_status() # Raises an exception for bad status codes`);
       codeLines.push(`#     # Try to parse as JSON, fallback to text`);
       codeLines.push(`#     try:`);
@@ -245,7 +255,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Move Mouse',
     description: 'Moves the mouse cursor to the specified X and Y coordinates.',
     icon: MousePointerSquareDashed,
-    category: 'GUI Automation (PyAutoGUI)',
+    category: 'Automation UI (PyAutoGUI)',
     parameters: [
       { id: 'x_coord', name: 'X Coordinate', type: 'number', defaultValue: '100', placeholder: 'e.g., 100 or var_x' },
       { id: 'y_coord', name: 'Y Coordinate', type: 'number', defaultValue: '100', placeholder: 'e.g., 100 or var_y' },
@@ -257,8 +267,8 @@ export const AVAILABLE_BLOCKS: Block[] = [
     id: 'pyautogui_click',
     name: 'Click Mouse',
     description: 'Performs a mouse click at the current or specified coordinates.',
-    icon: MousePointerSquareDashed, // Corrected from MousePointerClick if not intended
-    category: 'GUI Automation (PyAutoGUI)',
+    icon: MousePointerSquareDashed,
+    category: 'Automation UI (PyAutoGUI)',
     parameters: [
       { id: 'x_coord', name: 'X Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_x (blank for current)' },
       { id: 'y_coord', name: 'Y Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_y (blank for current)' },
@@ -279,7 +289,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Type Text',
     description: 'Types the given string of characters.',
     icon: ScanText, 
-    category: 'GUI Automation (PyAutoGUI)',
+    category: 'Automation UI (PyAutoGUI)',
     parameters: [
       { id: 'text_to_type', name: 'Text to Type', type: 'string', defaultValue: 'Hello!', placeholder: 'Enter text or variable name' },
       { id: 'interval', name: 'Interval (sec, per char)', type: 'number', defaultValue: '0.1', placeholder: 'e.g., 0.05 or var_interval' },
@@ -290,15 +300,15 @@ export const AVAILABLE_BLOCKS: Block[] = [
     id: 'pyautogui_screenshot',
     name: 'Take Screenshot',
     description: 'Takes a screenshot and saves it to a file, or stores it in a variable.',
-    icon: Puzzle, // Using a generic icon
-    category: 'GUI Automation (PyAutoGUI)',
+    icon: Puzzle, 
+    category: 'Automation UI (PyAutoGUI)',
     parameters: [
       { id: 'filename', name: 'Filename (optional)', type: 'string', defaultValue: 'screenshot.png', placeholder: 'e.g., my_screenshot.png or var (blank to not save)' },
       { id: 'variableName', name: 'Store Image In (optional)', type: 'string', defaultValue: '', placeholder: 'Variable name for image object' },
     ],
     codeTemplate: (params) => {
       let code = `# Ensure 'pyautogui' is installed: pip install pyautogui\n# import pyautogui # Uncomment\n`;
-      const filenameParam = params.filename === '""' ? '' : params.filename; // Handle empty string case
+      const filenameParam = params.filename === '""' ? '' : params.filename; 
       if (params.variableName && params.variableName !== '""') {
         code += `${params.variableName} = pyautogui.screenshot(${filenameParam ? filenameParam : ''})\n`;
         code += `print(f"Screenshot taken and stored in variable '${params.variableName}'.")\n`;
@@ -379,7 +389,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'driverVariable', name: 'Store WebDriver In', type: 'string', defaultValue: 'driver', placeholder: 'Variable name for WebDriver' },
     ],
     codeTemplate: (params) => {
-      const browser = params.browser.replace(/"/g, ''); // Get raw browser name
+      const browser = params.browser.replace(/"/g, ''); 
       let driverInitCode = `# Ensure 'selenium' is installed: pip install selenium\n`;
       driverInitCode += `# Ensure you have the appropriate WebDriver (e.g., chromedriver for Chrome) in your system PATH or specify its path.\n`;
       driverInitCode += `# from selenium import webdriver\n`;
@@ -462,7 +472,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
       { id: 'elementVariable', name: 'Store Element In', type: 'string', defaultValue: 'web_element', placeholder: 'Variable name for found element' },
     ],
     codeTemplate: (params) => {
-      const findBy = params.findBy.replace(/"/g, ''); // Get raw findBy strategy
+      const findBy = params.findBy.replace(/"/g, ''); 
       let code = `if ${params.driverVariable}:\n`;
       code += `    print(f"Attempting to find element by ${findBy}: {${params.selectorValue}}")\n`;
       code += `    try:\n`;
@@ -474,7 +484,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
       code += `        ${params.elementVariable} = None # Ensure variable exists\n`;
       code += `else:\n`;
       code += `    print("WebDriver instance (${params.driverVariable}) not available. Skipping Find Element.")\n`;
-      code += `    ${params.elementVariable} = None`; // Ensure variable exists
+      code += `    ${params.elementVariable} = None`; 
       return code;
     }
   },
@@ -557,7 +567,7 @@ function generateCodeRecursive(
                                    'dataFrameVariable', 'driverVariable', 'elementVariable', 'textVariable'].includes(paramId);
 
         if (isVariableNameParam) {
-          processedParams[paramId] = rawValue; // Pass raw value, it's a variable name
+          processedParams[paramId] = rawValue; 
           // Add to defined variables if this block defines it
             if (paramId === 'variableName' && blockDefinition.id === 'define_variable') blockScopedDefinedVariables.add(rawValue);
             if (paramId === 'variableName' && blockDefinition.id === 'read_file') blockScopedDefinedVariables.add(rawValue);
@@ -574,7 +584,7 @@ function generateCodeRecursive(
         // Special handling for pyautogui_click optional coordinates
         if (blockDefinition.id === 'pyautogui_click' && (paramId === 'x_coord' || paramId === 'y_coord')) {
             if (rawValue === '' || rawValue === '""') {
-                 processedParams[paramId] = '""'; // Template handles this for None or omission
+                 processedParams[paramId] = '""'; 
             } else if (blockScopedDefinedVariables.has(rawValue)) {
                 processedParams[paramId] = rawValue;
             } else if (isNumeric(rawValue)) {
