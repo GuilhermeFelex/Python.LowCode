@@ -2,6 +2,26 @@
 import type { Block, CanvasBlock } from '@/types/visual-script';
 import { Terminal, FileText, Repeat, Puzzle, Webhook, FunctionSquare, Variable } from 'lucide-react';
 
+// Helper function to determine if a string is a valid number
+function isNumeric(str: string): boolean {
+  if (typeof str !== 'string') return false;
+  // Check if it's a non-empty string and can be converted to a number that is finite
+  const num = Number(str);
+  return str.trim() !== '' && !isNaN(num) && isFinite(num);
+}
+
+// Helper to escape string for Python and ensure it's properly quoted for use in templates
+function formatPythonStringLiteral(value: string): string {
+  const escapedValue = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+  return `"${escapedValue}"`;
+}
+
+function formatPythonMultilineStringLiteral(value: string): string {
+  const escapedValue = value.replace(/\\/g, '\\\\').replace(/"""/g, '\\"""');
+  return `"""${escapedValue}"""`;
+}
+
+
 export const AVAILABLE_BLOCKS: Block[] = [
   {
     id: 'print_message',
@@ -10,9 +30,9 @@ export const AVAILABLE_BLOCKS: Block[] = [
     icon: Terminal,
     category: 'Output',
     parameters: [
-      { id: 'message', name: 'Message', type: 'string', defaultValue: 'Hello World', placeholder: 'Enter message' },
+      { id: 'message', name: 'Message', type: 'string', defaultValue: 'Hello World', placeholder: 'Enter message or variable name' },
     ],
-    codeTemplate: (params) => `print(f"${params.message}")`,
+    codeTemplate: (params) => `print(${params.message})`,
   },
   {
     id: 'read_file',
@@ -21,10 +41,12 @@ export const AVAILABLE_BLOCKS: Block[] = [
     icon: FileText,
     category: 'File IO',
     parameters: [
-      { id: 'filePath', name: 'File Path', type: 'string', defaultValue: './my_file.txt', placeholder: 'e.g., /path/to/file.txt' },
+      { id: 'filePath', name: 'File Path', type: 'string', defaultValue: './my_file.txt', placeholder: 'e.g., /path/to/file.txt or variable' },
       { id: 'variableName', name: 'Store in Variable', type: 'string', defaultValue: 'file_content', placeholder: 'Variable name' },
     ],
-    codeTemplate: (params) => `${params.variableName} = open("${params.filePath}", "r").read()`,
+    // params.filePath will be pre-processed to be either a variable name or a quoted string
+    // params.variableName is a raw string for the variable identifier
+    codeTemplate: (params) => `${params.variableName} = open(${params.filePath}, "r").read()`,
   },
   {
     id: 'loop_range',
@@ -33,11 +55,12 @@ export const AVAILABLE_BLOCKS: Block[] = [
     icon: Repeat,
     category: 'Logic',
     parameters: [
-      { id: 'count', name: 'Iterations', type: 'number', defaultValue: '5', placeholder: 'e.g., 10' },
+      { id: 'count', name: 'Iterations', type: 'number', defaultValue: '5', placeholder: 'e.g., 10 or variable' },
       { id: 'loopVariable', name: 'Loop Variable', type: 'string', defaultValue: 'i', placeholder: 'e.g., i' },
     ],
-    canHaveChildren: true, 
-    codeTemplate: (params) => `for ${params.loopVariable} in range(${params.count}):`, 
+    canHaveChildren: true,
+    // params.count is pre-processed (var or number literal), params.loopVariable is raw
+    codeTemplate: (params) => `for ${params.loopVariable} in range(${params.count}):`,
   },
   {
     id: 'define_variable',
@@ -47,8 +70,9 @@ export const AVAILABLE_BLOCKS: Block[] = [
     category: 'Data',
     parameters: [
       { id: 'variableName', name: 'Variable Name', type: 'string', defaultValue: 'my_var', placeholder: 'e.g., age' },
-      { id: 'value', name: 'Value', type: 'string', defaultValue: '""', placeholder: 'e.g., "John" or 42' },
+      { id: 'value', name: 'Value', type: 'string', defaultValue: '""', placeholder: 'e.g., "John", 42, or other_variable' },
     ],
+    // params.variableName is raw, params.value is pre-processed (var, number literal, or string literal)
     codeTemplate: (params) => `${params.variableName} = ${params.value}`,
   },
   {
@@ -58,10 +82,10 @@ export const AVAILABLE_BLOCKS: Block[] = [
     icon: Webhook,
     category: 'Network',
     parameters: [
-      { 
-        id: 'method', 
-        name: 'Method', 
-        type: 'select', 
+      {
+        id: 'method',
+        name: 'Method',
+        type: 'select',
         defaultValue: 'GET',
         options: [
           { value: 'GET', label: 'GET' },
@@ -71,15 +95,15 @@ export const AVAILABLE_BLOCKS: Block[] = [
           { value: 'PATCH', label: 'PATCH' },
         ]
       },
-      { id: 'url', name: 'URL', type: 'string', defaultValue: 'https://api.example.com/data', placeholder: 'https://...' },
-      { id: 'headers', name: 'Headers (key: value, one per line)', type: 'textarea', defaultValue: '', placeholder: 'Content-Type: application/json\nAuthorization: Bearer your_token' },
-      { 
-        id: 'body', 
-        name: 'Body (e.g., JSON)', 
-        type: 'textarea', 
-        defaultValue: '', 
-        placeholder: '{\n  "key": "value"\n}',
-        condition: { paramId: 'method', paramValue: ['POST', 'PUT', 'PATCH'] } 
+      { id: 'url', name: 'URL', type: 'string', defaultValue: 'https://api.example.com/data', placeholder: 'https://... or variable' },
+      { id: 'headers', name: 'Headers (key: value, one per line, or variable name for dict)', type: 'textarea', defaultValue: '', placeholder: 'Content-Type: application/json\nAuthorization: Bearer token_var\nOR\nmy_headers_dict_var' },
+      {
+        id: 'body',
+        name: 'Body (e.g., JSON string, or variable name for data/dict)',
+        type: 'textarea',
+        defaultValue: '',
+        placeholder: '{\n  "key": "value"\n}\nOR\nmy_body_data_var',
+        condition: { paramId: 'method', paramValue: ['POST', 'PUT', 'PATCH'] }
       },
       {
         id: 'authType',
@@ -95,9 +119,9 @@ export const AVAILABLE_BLOCKS: Block[] = [
       {
         id: 'authToken',
         name: 'Bearer Token',
-        type: 'password',
+        type: 'password', // Treated as string for variable check
         defaultValue: '',
-        placeholder: 'Enter Bearer Token',
+        placeholder: 'Enter Bearer Token or variable name',
         condition: { paramId: 'authType', paramValue: 'Bearer Token' }
       },
       {
@@ -105,90 +129,107 @@ export const AVAILABLE_BLOCKS: Block[] = [
         name: 'Basic Auth Username',
         type: 'string',
         defaultValue: '',
-        placeholder: 'Enter Username',
+        placeholder: 'Enter Username or variable name',
         condition: { paramId: 'authType', paramValue: 'Basic Auth' }
       },
       {
         id: 'authBasicPass',
         name: 'Basic Auth Password',
-        type: 'password',
+        type: 'password', // Treated as string for variable check
         defaultValue: '',
-        placeholder: 'Enter Password',
+        placeholder: 'Enter Password or variable name',
         condition: { paramId: 'authType', paramValue: 'Basic Auth' }
       },
       { id: 'responseVariable', name: 'Store Response In', type: 'string', defaultValue: 'response_data', placeholder: 'Variable name' },
     ],
     codeTemplate: (params) => {
-      const method = params.method || 'GET';
-      const url = params.url;
-      const responseVar = params.responseVariable;
-      const rawHeaders = params.headers;
-      const body = params.body;
-      const authType = params.authType;
-      const authToken = params.authToken;
-      const authUser = params.authBasicUser;
-      const authPass = params.authBasicPass;
+      // params are pre-processed. e.g. params.url is either `my_url_var` or `"https://literal.com"`
+      // params.method is a quoted string like `"GET"`
+      // params.headers is `my_headers_var` or `"""multiline literal"""`
+      // params.body is `my_body_var` or `"""multiline literal"""` or `None` (if not applicable)
+      // params.responseVariable is a raw variable name string.
+
+      const method = params.method.replace(/"/g, ''); // Unquote method for use in f-string or direct call
+      const responseVar = params.responseVariable; // This is a raw variable name
 
       let codeLines = [
-        `# Requires 'requests' library: pip install requests`,
-        `import requests # Make sure to uncomment if you run this code`,
-        `simulated_headers = {}`,
-        `simulated_auth = None`,
-        `simulated_body_payload = None`,
+        `# HTTP Request Block`,
+        `# Ensure 'requests' library is installed: pip install requests`,
+        `import requests  # Make sure to uncomment if you run this code`,
+        ``,
+        `_url = ${params.url}`,
+        `_headers = {}`,
+        `_auth = None`,
+        `_body_payload = None`,
+        `_method_str = "${method.toLowerCase()}"`,
+        ``,
       ];
-      
-      if (rawHeaders) {
-        codeLines.push(`# Processing provided headers:`);
-        codeLines.push(`raw_headers_str = """${rawHeaders}"""`);
-        codeLines.push(`for header_line in raw_headers_str.strip().split('\\n'):`);
-        codeLines.push(`    if ':' in header_line:`);
-        codeLines.push(`        key, value = header_line.split(':', 1)`);
-        codeLines.push(`        simulated_headers[key.strip()] = value.strip()`);
+
+      // Handle headers: params.headers is either a variable name or a """multiline string"""
+      codeLines.push(`# Processing Headers:`);
+      codeLines.push(`_raw_headers_input = ${params.headers}`);
+      codeLines.push(`if isinstance(_raw_headers_input, dict):`);
+      codeLines.push(`    _headers = _raw_headers_input`);
+      codeLines.push(`elif isinstance(_raw_headers_input, str) and _raw_headers_input.strip():`);
+      codeLines.push(`    for header_line in _raw_headers_input.strip().split('\\n'):`);
+      codeLines.push(`        if ':' in header_line:`);
+      codeLines.push(`            key, value = header_line.split(':', 1)`);
+      codeLines.push(`            _headers[key.strip()] = value.strip()`);
+      codeLines.push(``);
+
+
+      const authType = params.authType.replace(/"/g, ''); // Unquote
+      if (authType === 'Bearer Token') {
+        codeLines.push(`# Authentication: Bearer Token`);
+        codeLines.push(`_bearer_token = ${params.authToken}`);
+        codeLines.push(`_headers['Authorization'] = f"Bearer {_bearer_token}"`);
+      } else if (authType === 'Basic Auth') {
+        codeLines.push(`# Authentication: Basic Auth`);
+        codeLines.push(`_basic_user = ${params.authBasicUser}`);
+        codeLines.push(`_basic_pass = ${params.authBasicPass}`);
+        codeLines.push(`_auth = (_basic_user, _basic_pass)`);
+      }
+      codeLines.push(``);
+
+      const bodyRelevantMethods = ['POST', 'PUT', 'PATCH'];
+      if (bodyRelevantMethods.includes(method.toUpperCase())) {
+        codeLines.push(`# Request Body for ${method}:`);
+        codeLines.push(`_raw_body_input = ${params.body}`);
+        codeLines.push(`_body_payload = _raw_body_input # Assumes it's a string or already a dict/None if variable`);
+        codeLines.push(`# For actual use with requests, if _body_payload is a JSON string, you might want:`);
+        codeLines.push(`# import json`);
+        codeLines.push(`# try: _body_payload = json.loads(_raw_body_input)`);
+        codeLines.push(`# except json.JSONDecodeError: pass # keep as string if not valid JSON`);
+        codeLines.push(``);
       }
 
-      if (authType === 'Bearer Token' && authToken) {
-        codeLines.push(`# Authentication: Bearer Token`);
-        codeLines.push(`simulated_headers['Authorization'] = f"Bearer ${authToken}"`);
-      } else if (authType === 'Basic Auth' && authUser && authPass) {
-        codeLines.push(`# Authentication: Basic Auth`);
-        codeLines.push(`simulated_auth = ('${authUser}', '${authPass}')`);
+      codeLines.push(`# Simulating the HTTP request:`);
+      let reqArgs = [`_url`];
+      reqArgs.push(`headers=_headers`);
+      if (authType === 'Basic Auth') {
+        reqArgs.push(`auth=_auth`);
       }
-      
-      const bodyRelevantMethods = ['POST', 'PUT', 'PATCH'];
-      if (bodyRelevantMethods.includes(method.toUpperCase()) && body) {
-        codeLines.push(`# Request Body for ${method}:`);
-        codeLines.push(`# Assuming JSON body, but could be other formats.`);
-        codeLines.push(`# For actual use, parse/validate JSON if necessary:`);
-        codeLines.push(`# import json`);
-        codeLines.push(`# simulated_body_payload = json.loads("""${body}""")`);
-        codeLines.push(`simulated_body_payload = """${body}""" # As a string for simulation`);
+
+      if (bodyRelevantMethods.includes(method.toUpperCase())) {
+        codeLines.push(`# For JSON, use 'json=_body_payload' if it's a dict. For raw string, use 'data=_body_payload'.`);
+        codeLines.push(`# This example uses 'data' assuming string body or form data.`);
+        reqArgs.push(`data=_body_payload`);
       }
-      
-      codeLines.push(`\n# Simulating the HTTP request:`);
-      let reqArgs = [`"${url}"`];
-      if (Object.keys(params).includes('headers') || authType === 'Bearer Token') { // I add the 'headers' arg to the request if actual headers are given or if it's Bearer auth.
-        reqArgs.push(`headers=simulated_headers`);
-      }
-      if (authType === 'Basic Auth' && authUser && authPass) {
-        reqArgs.push(`auth=simulated_auth`);
-      }
-      if (bodyRelevantMethods.includes(method.toUpperCase()) && body) {
-        codeLines.push(`# For JSON, use 'json=simulated_body_payload' if it's a dict. For raw string, use 'data=simulated_body_payload'.`);
-        reqArgs.push(`data=simulated_body_payload # Example with data, adjust for json if parsed to dict`);
-      }
-      
-      codeLines.push(`${responseVar} = "--- SIMULATED RESPONSE ---" # Placeholder for actual request`);
+
+      codeLines.push(`${responseVar} = "--- SIMULATED RESPONSE ---" # Placeholder for actual request result`);
       codeLines.push(`# try:`);
-      codeLines.push(`#     response = requests.${method.toLowerCase()}(${reqArgs.join(', ')})`);
+      codeLines.push(`#     response = requests.request(method=_method_str, ${reqArgs.join(', ')})`);
       codeLines.push(`#     response.raise_for_status() # Raise an exception for HTTP errors`);
-      codeLines.push(`#     ${responseVar} = response.json() # or response.text, response.content`);
+      codeLines.push(`#     # Process response: response.json(), response.text, response.content`);
+      codeLines.push(`#     ${responseVar} = response.text # Example: store text response`);
       codeLines.push(`# except requests.exceptions.RequestException as e:`);
       codeLines.push(`#     ${responseVar} = f"Error: {e}"`);
       codeLines.push(`#     print(${responseVar})`);
-      codeLines.push(`\nprint(f"Simulated ${method} to {url}")`);
+      codeLines.push(``);
+      codeLines.push(`print(f"Simulated {method} to {_url}")`);
       codeLines.push(`print(f"Response (simulated) stored in: ${responseVar}")`);
       codeLines.push(`print(f"Value of ${responseVar}: {${responseVar}}")`);
-      
+
       return codeLines.join('\n');
     },
   },
@@ -199,43 +240,148 @@ export const AVAILABLE_BLOCKS: Block[] = [
     icon: FunctionSquare,
     category: 'Advanced',
     parameters: [
-      { id: 'functionName', name: 'Function Name', type: 'string', defaultValue: 'my_custom_function', placeholder: 'Function name' },
-      { id: 'args', name: 'Arguments (comma-sep)', type: 'string', defaultValue: '', placeholder: 'arg1, "string_arg"' },
+      { id: 'functionName', name: 'Function Name', type: 'string', defaultValue: 'my_custom_function', placeholder: 'Function name or variable' },
+      { id: 'args', name: 'Arguments (comma-sep, use var names or literals)', type: 'string', defaultValue: '', placeholder: 'arg_var, "string_literal", 123' },
       { id: 'outputVar', name: 'Store Result In (optional)', type: 'string', defaultValue: '', placeholder: 'result_variable' },
     ],
     codeTemplate: (params) => {
-      const args = params.args ? params.args : '';
+      // params.functionName is pre-processed. params.args is a string that needs to be used as is.
+      // params.outputVar is a raw variable name.
+      const args = params.args ? params.args.replace(/"/g, '') : ''; // Use raw args string. User must quote literals.
+      const funcCall = `${params.functionName}(${args})`;
       if (params.outputVar) {
-        return `${params.outputVar} = ${params.functionName}(${args})`;
+        return `${params.outputVar} = ${funcCall}`;
       }
-      return `${params.functionName}(${args})`;
+      return funcCall;
     }
   },
 ];
 
-function generateCodeRecursive(blocks: CanvasBlock[], availableBlocks: Block[], indentLevel = 0): string[] {
+function generateCodeRecursive(
+  blocks: CanvasBlock[],
+  availableBlocks: Block[],
+  indentLevel = 0,
+  currentDefinedVariables: Set<string>
+): string[] {
   const lines: string[] = [];
   const indent = '    '.repeat(indentLevel);
+  // Create a new set for this scope to not affect sibling scopes at higher levels
+  let blockScopedDefinedVariables = new Set(currentDefinedVariables);
 
   blocks.forEach(canvasBlock => {
     const blockDefinition = availableBlocks.find(b => b.id === canvasBlock.blockTypeId);
     if (blockDefinition) {
+      const processedParams: Record<string, string> = {};
+
+      // Pre-process parameters
+      for (const paramDef of blockDefinition.parameters) {
+        const paramId = paramDef.id;
+        // For variableName parameters (like in define_variable, read_file, loop_range), we want the raw user input.
+        if (paramId === 'variableName' || paramId === 'loopVariable' || paramId === 'responseVariable' || paramId === 'outputVar') {
+          processedParams[paramId] = canvasBlock.params[paramId] ?? paramDef.defaultValue;
+          continue;
+        }
+        
+        const rawValue = canvasBlock.params[paramId] ?? paramDef.defaultValue;
+
+        if (blockDefinition.id === 'define_variable' && paramId === 'value') {
+          if (blockScopedDefinedVariables.has(rawValue)) {
+            processedParams[paramId] = rawValue;
+          } else if (isNumeric(rawValue)) {
+            processedParams[paramId] = rawValue;
+          } else {
+            processedParams[paramId] = formatPythonStringLiteral(rawValue);
+          }
+        } else if (paramDef.type === 'textarea') {
+          // For textareas, if the exact content is a variable name, use it. Otherwise, treat as multiline string.
+          if (blockScopedDefinedVariables.has(rawValue.trim())) {
+             processedParams[paramId] = rawValue.trim();
+          } else {
+            // Check if body is applicable for HTTP request
+            if (blockDefinition.id === 'http_request' && paramId === 'body') {
+                const methodParam = blockDefinition.parameters.find(p => p.id === 'method');
+                const currentMethod = (canvasBlock.params[methodParam!.id] ?? methodParam!.defaultValue).toUpperCase();
+                const bodyRelevantMethods = ['POST', 'PUT', 'PATCH'];
+                if (bodyRelevantMethods.includes(currentMethod)) {
+                    processedParams[paramId] = formatPythonMultilineStringLiteral(rawValue);
+                } else {
+                    processedParams[paramId] = "None"; // Body not applicable
+                }
+            } else {
+                 processedParams[paramId] = formatPythonMultilineStringLiteral(rawValue);
+            }
+          }
+        } else if (blockScopedDefinedVariables.has(rawValue)) {
+          // If the rawValue matches a defined variable, use the variable name directly
+          processedParams[paramId] = rawValue;
+        } else {
+          // Otherwise, treat as a literal value based on its type
+          if (paramDef.type === 'string' || paramDef.type === 'password' || paramDef.type === 'select') {
+            processedParams[paramId] = formatPythonStringLiteral(rawValue);
+          } else if (paramDef.type === 'number') {
+            if (isNumeric(rawValue)) {
+              processedParams[paramId] = rawValue; // It's a number literal
+            } else {
+              // Non-numeric value for a number field, could be an error or intended string, quote it.
+              processedParams[paramId] = formatPythonStringLiteral(rawValue);
+            }
+          } else {
+            // Fallback for other types (e.g. boolean, though not explicitly handled here)
+            // Safest to treat as a string if unsure, or handle specific types
+            processedParams[paramId] = formatPythonStringLiteral(rawValue);
+          }
+        }
+      }
+      
+      // For custom_function 'args' parameter, it's a raw string from user, not to be quoted entirely
+      if (blockDefinition.id === 'custom_function' && processedParams.args) {
+        // The user is responsible for quoting string literals within the args string, e.g., "str_val", var_name, 123
+        // We just pass it through. The template handles it.
+        // However, `canvasBlock.params.args` should be used directly if present
+         processedParams.args = canvasBlock.params.args ?? blockDefinition.parameters.find(p=>p.id === 'args')!.defaultValue;
+      }
+
+
       try {
-        const generatedBlockCode = blockDefinition.codeTemplate(canvasBlock.params);
+        const generatedBlockCode = blockDefinition.codeTemplate(processedParams);
         generatedBlockCode.split('\n').forEach(line => {
           lines.push(indent + line);
         });
 
+        if (blockDefinition.id === 'define_variable') {
+          const varName = canvasBlock.params.variableName;
+          if (varName) {
+            blockScopedDefinedVariables.add(varName.trim());
+          }
+        } else if (blockDefinition.id === 'read_file') {
+          const varName = canvasBlock.params.variableName;
+           if (varName) {
+            blockScopedDefinedVariables.add(varName.trim());
+          }
+        } else if (blockDefinition.id === 'http_request') {
+          const varName = canvasBlock.params.responseVariable;
+           if (varName) {
+            blockScopedDefinedVariables.add(varName.trim());
+          }
+        } else if (blockDefinition.id === 'custom_function' && canvasBlock.params.outputVar) {
+           const varName = canvasBlock.params.outputVar;
+           if (varName) {
+            blockScopedDefinedVariables.add(varName.trim());
+          }
+        }
+
+
         if (blockDefinition.canHaveChildren) {
           if (canvasBlock.children && canvasBlock.children.length > 0) {
-            lines.push(...generateCodeRecursive(canvasBlock.children, availableBlocks, indentLevel + 1));
+            lines.push(...generateCodeRecursive(canvasBlock.children, availableBlocks, indentLevel + 1, blockScopedDefinedVariables));
           } else {
             lines.push(indent + '    pass');
           }
         }
       } catch (error) {
-        console.error("Error generating code for block:", blockDefinition, error);
-        lines.push(indent + `# Error generating code for block ${blockDefinition.name}`);
+        // My fix: provide more context on error
+        console.error("Error generating code for block:", blockDefinition.name, "Instance:", canvasBlock.instanceId, "Params:", processedParams, "Error:", error);
+        lines.push(indent + `# Error generating code for block ${blockDefinition.name} (ID: ${canvasBlock.instanceId})`);
       }
     }
   });
@@ -253,7 +399,7 @@ export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks:
     ''
   ];
 
-  codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0));
+  // Initialize with an empty set for top-level defined variables
+  codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0, new Set<string>()));
   return codeLines.join('\n');
 }
-
