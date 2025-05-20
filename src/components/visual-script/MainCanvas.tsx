@@ -12,7 +12,7 @@ import { SquareDashedMousePointer } from 'lucide-react';
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
   availableBlocks: Block[];
-  onDrop: (event: DragEvent<HTMLDivElement>) => void;
+  onBlockDrop: (event: DragEvent<HTMLDivElement>, targetParentId: string | null, insertBeforeId: string | null) => void;
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
   onToggleBlockCollapse: (instanceId: string) => void;
@@ -21,14 +21,27 @@ interface MainCanvasProps {
 export function MainCanvas({
   canvasBlocks,
   availableBlocks,
-  onDrop,
+  onBlockDrop,
   onParamChange,
   onRemoveBlock,
   onToggleBlockCollapse,
 }: MainCanvasProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault(); 
-    event.dataTransfer.dropEffect = 'move';
+    event.preventDefault();
+    const isReorder = event.dataTransfer.types.includes('reorderinstanceid');
+    const isNewBlock = event.dataTransfer.types.includes('newblocktypeid');
+    if (isReorder || isNewBlock) {
+        event.dataTransfer.dropEffect = 'move';
+    } else {
+        event.dataTransfer.dropEffect = 'none';
+    }
+  };
+
+  const handleDropOnCanvasBackground = (event: DragEvent<HTMLDivElement>) => {
+    // Only handle drops if they occur directly on the ScrollArea background, not on child elements.
+    if (event.target === event.currentTarget) {
+      onBlockDrop(event, null, null); // targetParentId is null for root, insertBeforeId is null to append
+    }
   };
 
   return (
@@ -42,7 +55,7 @@ export function MainCanvas({
       <ScrollArea
         className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"
         onDragOver={handleDragOver}
-        onDrop={onDrop}
+        onDrop={handleDropOnCanvasBackground}
         aria-label="Main script canvas"
       >
         <div className="p-6 space-y-4 min-h-full">
@@ -65,6 +78,8 @@ export function MainCanvas({
                 onParamChange={onParamChange}
                 onRemove={onRemoveBlock}
                 onToggleCollapse={onToggleBlockCollapse}
+                onBlockDrop={onBlockDrop}
+                parentId={null} // Root blocks have null parentId
               />
             );
           })}

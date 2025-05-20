@@ -22,56 +22,158 @@ export default function VisualScriptPage() {
   }, []);
 
   useEffect(() => {
-    if (isClient) { 
+    if (isClient) {
       const code = generatePythonCode(canvasBlocks, AVAILABLE_BLOCKS);
       setGeneratedCode(code);
     }
   }, [canvasBlocks, isClient]);
 
-  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const blockId = event.dataTransfer.getData('blockId');
-    const blockType = AVAILABLE_BLOCKS.find(b => b.id === blockId);
+  const findBlockRecursive = (
+    blocks: CanvasBlock[],
+    instanceId: string
+  ): { block: CanvasBlock | null; path: string[] } => {
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      if (block.instanceId === instanceId) {
+        return { block, path: [i.toString()] };
+      }
+      if (block.children) {
+        const foundInChildren = findBlockRecursive(block.children, instanceId);
+        if (foundInChildren.block) {
+          return {
+            block: foundInChildren.block,
+            path: [i.toString(), ...foundInChildren.path],
+          };
+        }
+      }
+    }
+    return { block: null, path: [] };
+  };
 
-    if (!blockType || !isClient) return;
-
-    const initialParams: Record<string, string> = {};
-    blockType.parameters.forEach(p => {
-      initialParams[p.id] = p.defaultValue;
+  const removeBlockRecursive = (
+    blocks: CanvasBlock[],
+    instanceId: string
+  ): { removedBlock: CanvasBlock | null; updatedBlocks: CanvasBlock[] } => {
+    let removedBlock: CanvasBlock | null = null;
+    const remainingBlocks = blocks.filter((block) => {
+      if (block.instanceId === instanceId) {
+        removedBlock = block;
+        return false;
+      }
+      return true;
     });
 
-    const newBlock: CanvasBlock = {
-      instanceId: `block_${crypto.randomUUID()}`,
-      blockTypeId: blockType.id,
-      params: initialParams,
-      isCollapsed: false, // Initialize as expanded
-      ...(blockType.canHaveChildren && { children: [] }),
-    };
+    if (removedBlock) {
+      return { removedBlock, updatedBlocks: remainingBlocks };
+    }
 
-    const targetElement = event.target as HTMLElement;
-    const dropZoneElement = targetElement.closest('[data-is-drop-zone="true"]');
-    const parentInstanceId = dropZoneElement?.getAttribute('data-instance-id');
+    const updatedBlocks = remainingBlocks.map((block) => {
+      if (block.children) {
+        const result = removeBlockRecursive(block.children, instanceId);
+        if (result.removedBlock) {
+          removedBlock = result.removedBlock;
+          return { ...block, children: result.updatedBlocks };
+        }
+      }
+      return block;
+    });
 
-    if (parentInstanceId) {
-      setCanvasBlocks(prevBlocks => {
-        const addRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
-          return blocks.map(b => {
-            if (b.instanceId === parentInstanceId) {
-              const parentDef = AVAILABLE_BLOCKS.find(def => def.id === b.blockTypeId);
-              if (parentDef?.canHaveChildren) {
-                return { ...b, children: [...(b.children || []), newBlock] };
-              }
-            }
-            if (b.children && b.children.length > 0) {
-              return { ...b, children: addRecursive(b.children) };
-            }
-            return b;
-          });
+    return { removedBlock, updatedBlocks };
+  };
+
+  const insertBlockRecursive = (
+    blocks: CanvasBlock[],
+    blockToInsert: CanvasBlock,
+    targetParentId: string | null,
+    insertBeforeId: string | null
+  ): CanvasBlock[] => {
+    if (targetParentId === null) { // Inserting at root level
+      let newBlocks = [...blocks];
+      if (insertBeforeId) {
+        const targetIndex = newBlocks.findIndex(b => b.instanceId === insertBeforeId);
+        if (targetIndex !== -1) {
+          newBlocks.splice(targetIndex, 0, blockToInsert);
+        } else {
+          newBlocks.push(blockToInsert); // Fallback: append if target not found
+        }
+      } else {
+        newBlocks.push(blockToInsert);
+      }
+      return newBlocks;
+    }
+
+    // Inserting into a child list
+    return blocks.map(block => {
+      if (block.instanceId === targetParentId) {
+        let newChildren = block.children ? [...block.children] : [];
+        if (insertBeforeId) {
+          const targetIndex = newChildren.findIndex(b => b.instanceId === insertBeforeId);
+          if (targetIndex !== -1) {
+            newChildren.splice(targetIndex, 0, blockToInsert);
+          } else {
+            newChildren.push(blockToInsert); // Fallback: append if target not found
+          }
+        } else {
+          newChildren.push(blockToInsert);
+        }
+        return { ...block, children: newChildren, isCollapsed: false }; // Ensure parent is expanded
+      }
+      if (block.children) {
+        return {
+          ...block,
+          children: insertBlockRecursive(block.children, blockToInsert, targetParentId, insertBeforeId),
         };
-        return addRecursive(prevBlocks);
+      }
+      return block;
+    });
+  };
+
+
+  const handleBlockDrop = (
+    event: DragEvent<HTMLDivElement>,
+    targetParentId: string | null, // ID of the parent block, or null for root
+    insertBeforeId: string | null  // ID of the block to insert before, or null to append
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const newBlockTypeId = event.dataTransfer.getData('newBlockTypeId');
+    const reorderInstanceId = event.dataTransfer.getData('reorderInstanceId');
+
+    if (newBlockTypeId && isClient) {
+      const blockType = AVAILABLE_BLOCKS.find(b => b.id === newBlockTypeId);
+      if (!blockType) return;
+
+      const initialParams: Record<string, string> = {};
+      blockType.parameters.forEach(p => {
+        initialParams[p.id] = p.defaultValue;
       });
-    } else {
-      setCanvasBlocks(prev => [...prev, newBlock]);
+
+      const newBlock: CanvasBlock = {
+        instanceId: `block_${crypto.randomUUID()}`,
+        blockTypeId: blockType.id,
+        params: initialParams,
+        isCollapsed: false,
+        ...(blockType.canHaveChildren && { children: [] }),
+      };
+      setCanvasBlocks(prevBlocks => insertBlockRecursive(prevBlocks, newBlock, targetParentId, insertBeforeId));
+
+    } else if (reorderInstanceId && isClient) {
+      if (reorderInstanceId === targetParentId || reorderInstanceId === insertBeforeId) return; // Prevent dropping a block onto itself
+
+      const { removedBlock, updatedBlocks: blocksAfterRemoval } = removeBlockRecursive(canvasBlocks, reorderInstanceId);
+      if (removedBlock) {
+        // Check if trying to drop a parent into its own child (or sub-child)
+        if (targetParentId) {
+            const { block: targetParentBlock } = findBlockRecursive([removedBlock], targetParentId);
+            if (targetParentBlock) {
+                toast({ title: "Invalid Move", description: "Cannot move a parent block into one of its own children.", variant: "destructive" });
+                setCanvasBlocks(canvasBlocks); // Revert to original state if invalid move
+                return;
+            }
+        }
+        setCanvasBlocks(insertBlockRecursive(blocksAfterRemoval, removedBlock, targetParentId, insertBeforeId));
+      }
     }
   };
 
@@ -91,17 +193,8 @@ export default function VisualScriptPage() {
   };
 
   const handleRemoveBlock = (instanceId: string) => {
-    const removeRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
-      const filteredBlocks = blocks.filter(block => block.instanceId !== instanceId);
-      return filteredBlocks.map(block => {
-        if (block.children && block.children.length > 0) {
-          const updatedChildren = removeRecursive(block.children);
-          return { ...block, children: block.children !== undefined ? updatedChildren : undefined };
-        }
-        return block;
-      });
-    };
-    setCanvasBlocks(prev => removeRecursive(prev));
+    const { updatedBlocks } = removeBlockRecursive(canvasBlocks, instanceId);
+    setCanvasBlocks(updatedBlocks);
   };
 
   const handleToggleBlockCollapse = (instanceId: string) => {
@@ -173,13 +266,14 @@ export default function VisualScriptPage() {
     }
   };
 
+
   if (!isClient) {
-    return null; 
+    return null;
   }
 
   return (
     <div className="flex h-screen max-h-screen overflow-hidden bg-background text-foreground">
-      <BlockPanel 
+      <BlockPanel
         availableBlocks={AVAILABLE_BLOCKS}
         onSimulate={handleSimulate}
         onCopyCode={handleCopyCode}
@@ -189,7 +283,7 @@ export default function VisualScriptPage() {
       <MainCanvas
         canvasBlocks={canvasBlocks}
         availableBlocks={AVAILABLE_BLOCKS}
-        onDrop={handleDrop}
+        onBlockDrop={handleBlockDrop}
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
