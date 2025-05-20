@@ -1,6 +1,6 @@
 
 import type { Block, CanvasBlock } from '@/types/visual-script';
-import { Terminal, FileText, Repeat, Puzzle, Webhook, FunctionSquare, Variable, MousePointerSquareDashed, Database, FileUp, FileDown, ScanText } from 'lucide-react';
+import { Terminal, FileText, Repeat, Puzzle, Webhook, FunctionSquare, Variable, MousePointerSquareDashed, Database, FileUp, FileDown, ScanText, Power, Globe, LocateFixed, MousePointerClick, Type, Baseline } from 'lucide-react';
 
 // Helper function to determine if a string is a valid number
 function isNumeric(str: string): boolean {
@@ -195,14 +195,21 @@ export const AVAILABLE_BLOCKS: Block[] = [
       }
 
       if (bodyRelevantMethods.includes(method.toUpperCase())) {
-        reqArgs.push(`data=_body_payload`);
+        // For POST/PUT/PATCH, requests library uses 'data' for form-encoded, 'json' for dicts.
+        // We'll assume _body_payload could be a string (like JSON string) or a dict.
+        // The template simplifies this by just passing it to 'data'. User needs to ensure format.
+        codeLines.push(`data=_body_payload`);
       }
 
       codeLines.push(`${responseVar} = "--- SIMULATED RESPONSE ---" # Placeholder`);
       codeLines.push(`# try:`);
       codeLines.push(`#     response = requests.request(method=_method_str, ${reqArgs.join(', ')})`);
-      codeLines.push(`#     response.raise_for_status()`);
-      codeLines.push(`#     ${responseVar} = response.text`);
+      codeLines.push(`#     response.raise_for_status() # Raises an exception for bad status codes`);
+      codeLines.push(`#     # Try to parse as JSON, fallback to text`);
+      codeLines.push(`#     try:`);
+      codeLines.push(`#         ${responseVar} = response.json()`);
+      codeLines.push(`#     except requests.exceptions.JSONDecodeError:`);
+      codeLines.push(`#         ${responseVar} = response.text`);
       codeLines.push(`# except requests.exceptions.RequestException as e:`);
       codeLines.push(`#     ${responseVar} = f"Error: {e}"`);
       codeLines.push(`#     print(${responseVar})`);
@@ -250,7 +257,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     id: 'pyautogui_click',
     name: 'Click Mouse',
     description: 'Performs a mouse click at the current or specified coordinates.',
-    icon: MousePointerSquareDashed,
+    icon: MousePointerSquareDashed, // Corrected from MousePointerClick if not intended
     category: 'GUI Automation (PyAutoGUI)',
     parameters: [
       { id: 'x_coord', name: 'X Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_x (blank for current)' },
@@ -292,7 +299,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     codeTemplate: (params) => {
       let code = `# Ensure 'pyautogui' is installed: pip install pyautogui\n# import pyautogui # Uncomment\n`;
       const filenameParam = params.filename === '""' ? '' : params.filename; // Handle empty string case
-      if (params.variableName) {
+      if (params.variableName && params.variableName !== '""') {
         code += `${params.variableName} = pyautogui.screenshot(${filenameParam ? filenameParam : ''})\n`;
         code += `print(f"Screenshot taken and stored in variable '${params.variableName}'.")\n`;
         if (filenameParam) {
@@ -302,8 +309,8 @@ export const AVAILABLE_BLOCKS: Block[] = [
         code += `pyautogui.screenshot(${filenameParam})\n`;
         code += `print(f"Screenshot saved to file: {${filenameParam}}")`;
       } else {
-        code += `pyautogui.screenshot()\n`;
-        code += `print("Screenshot taken (not saved to file or variable).")`;
+        code += `image_obj = pyautogui.screenshot()\n`;
+        code += `print("Screenshot taken (image object stored in 'image_obj', not saved to file).")`;
       }
       return code;
     },
@@ -349,6 +356,174 @@ export const AVAILABLE_BLOCKS: Block[] = [
     ],
     codeTemplate: (params) => `# Ensure 'pandas' is installed: pip install pandas\n# import pandas as pd # Uncomment\nprint(f"First {${params.numRows}} rows of DataFrame '${params.dataFrameVariable}':")\nprint(${params.dataFrameVariable}.head(${params.numRows}))`,
   },
+  // Selenium Blocks
+  {
+    id: 'selenium_initialize_driver',
+    name: 'Initialize WebDriver (Selenium)',
+    description: 'Initializes a Selenium WebDriver instance for a chosen browser.',
+    icon: Power,
+    category: 'Web Automation (Selenium)',
+    parameters: [
+      { 
+        id: 'browser', 
+        name: 'Browser', 
+        type: 'select', 
+        defaultValue: 'Chrome', 
+        options: [
+          { value: 'Chrome', label: 'Chrome' },
+          { value: 'Firefox', label: 'Firefox' },
+          { value: 'Edge', label: 'Edge' },
+          { value: 'Safari', label: 'Safari (macOS only)' },
+        ]
+      },
+      { id: 'driverVariable', name: 'Store WebDriver In', type: 'string', defaultValue: 'driver', placeholder: 'Variable name for WebDriver' },
+    ],
+    codeTemplate: (params) => {
+      const browser = params.browser.replace(/"/g, ''); // Get raw browser name
+      let driverInitCode = `# Ensure 'selenium' is installed: pip install selenium\n`;
+      driverInitCode += `# Ensure you have the appropriate WebDriver (e.g., chromedriver for Chrome) in your system PATH or specify its path.\n`;
+      driverInitCode += `# from selenium import webdriver\n`;
+      driverInitCode += `# from selenium.webdriver.common.by import By # Often needed for find_element\n`;
+      driverInitCode += `# Example for Chrome with automatic driver management (requires 'webdriver-manager' package: pip install webdriver-manager):\n`;
+      driverInitCode += `# from selenium.webdriver.chrome.service import Service as ChromeService\n`;
+      driverInitCode += `# from webdriver_manager.chrome import ChromeDriverManager\n`;
+      driverInitCode += `\n`;
+      driverInitCode += `# --- Initializing WebDriver for ${browser} ---\n`;
+      driverInitCode += `print("Attempting to initialize Selenium WebDriver for ${browser}...")\n`;
+      driverInitCode += `try:\n`;
+      if (browser === 'Chrome') {
+        driverInitCode += `    # ${params.driverVariable} = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())) # Auto-driver management\n`;
+        driverInitCode += `    # OR, if chromedriver is in PATH:\n`;
+        driverInitCode += `    ${params.driverVariable} = webdriver.Chrome()\n`;
+      } else if (browser === 'Firefox') {
+        driverInitCode += `    # from selenium.webdriver.firefox.service import Service as FirefoxService\n`;
+        driverInitCode += `    # from webdriver_manager.firefox import GeckoDriverManager\n`;
+        driverInitCode += `    # ${params.driverVariable} = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install())) # Auto-driver management\n`;
+        driverInitCode += `    # OR, if geckodriver is in PATH:\n`;
+        driverInitCode += `    ${params.driverVariable} = webdriver.Firefox()\n`;
+      } else if (browser === 'Edge') {
+        driverInitCode += `    # from selenium.webdriver.edge.service import Service as EdgeService\n`;
+        driverInitCode += `    # from webdriver_manager.microsoft import EdgeChromiumDriverManager\n`;
+        driverInitCode += `    # ${params.driverVariable} = webdriver.Edge(service=EdgeService(EdgeChromiumDriverManager().install())) # Auto-driver management\n`;
+        driverInitCode += `    # OR, if msedgedriver is in PATH:\n`;
+        driverInitCode += `    ${params.driverVariable} = webdriver.Edge()\n`;
+      } else if (browser === 'Safari') {
+        driverInitCode += `    # SafariDriver is usually pre-installed on macOS. Enable 'Allow Remote Automation' in Safari's Develop menu.\n`;
+        driverInitCode += `    ${params.driverVariable} = webdriver.Safari()\n`;
+      } else {
+        driverInitCode += `    # WebDriver for ${browser} not explicitly configured in this template. Please adapt.\n`;
+        driverInitCode += `    ${params.driverVariable} = None\n`;
+      }
+      driverInitCode += `    print(f"Selenium WebDriver for ${browser} initialized and stored in variable '{params.driverVariable}'.")\n`;
+      driverInitCode += `except Exception as e:\n`;
+      driverInitCode += `    print(f"Error initializing Selenium WebDriver for ${browser}: {{e}}")\n`;
+      driverInitCode += `    print("Please ensure Selenium is installed, the correct WebDriver is in your PATH or its service is correctly configured.")\n`;
+      driverInitCode += `    ${params.driverVariable} = None # Ensure variable exists even on failure\n`;
+      return driverInitCode;
+    }
+  },
+  {
+    id: 'selenium_open_url',
+    name: 'Open URL (Selenium)',
+    description: 'Navigates the browser to the specified URL.',
+    icon: Globe,
+    category: 'Web Automation (Selenium)',
+    parameters: [
+      { id: 'driverVariable', name: 'WebDriver Instance', type: 'string', defaultValue: 'driver', placeholder: 'Variable holding WebDriver' },
+      { id: 'url', name: 'URL to Open', type: 'string', defaultValue: 'https://www.example.com', placeholder: 'https://...' },
+    ],
+    codeTemplate: (params) => `if ${params.driverVariable}:\n    print(f"Navigating to URL: {${params.url}}")\n    ${params.driverVariable}.get(${params.url})\nelse:\n    print("WebDriver instance (${params.driverVariable}) not available. Skipping Open URL.")`
+  },
+  {
+    id: 'selenium_find_element',
+    name: 'Find Element (Selenium)',
+    description: 'Finds a web element by a specified selector strategy.',
+    icon: LocateFixed,
+    category: 'Web Automation (Selenium)',
+    parameters: [
+      { id: 'driverVariable', name: 'WebDriver Instance', type: 'string', defaultValue: 'driver', placeholder: 'Variable holding WebDriver' },
+      { 
+        id: 'findBy', 
+        name: 'Find By', 
+        type: 'select', 
+        defaultValue: 'ID', 
+        options: [
+          { value: 'ID', label: 'ID' },
+          { value: 'NAME', label: 'Name' },
+          { value: 'XPATH', label: 'XPath' },
+          { value: 'CSS_SELECTOR', label: 'CSS Selector' },
+          { value: 'CLASS_NAME', label: 'Class Name' },
+          { value: 'LINK_TEXT', label: 'Link Text' },
+          { value: 'PARTIAL_LINK_TEXT', label: 'Partial Link Text' },
+          { value: 'TAG_NAME', label: 'Tag Name' },
+        ]
+      },
+      { id: 'selectorValue', name: 'Selector Value', type: 'string', defaultValue: 'myElementId', placeholder: 'e.g., element_id or //div[@id="main"]' },
+      { id: 'elementVariable', name: 'Store Element In', type: 'string', defaultValue: 'web_element', placeholder: 'Variable name for found element' },
+    ],
+    codeTemplate: (params) => {
+      const findBy = params.findBy.replace(/"/g, ''); // Get raw findBy strategy
+      let code = `if ${params.driverVariable}:\n`;
+      code += `    print(f"Attempting to find element by ${findBy}: {${params.selectorValue}}")\n`;
+      code += `    try:\n`;
+      code += `        # Ensure 'By' is imported: from selenium.webdriver.common.by import By\n`;
+      code += `        ${params.elementVariable} = ${params.driverVariable}.find_element(By.${findBy}, ${params.selectorValue})\n`;
+      code += `        print(f"Element found and stored in variable '{params.elementVariable}'.")\n`;
+      code += `    except Exception as e:\n`;
+      code += `        print(f"Error finding element by ${findBy} ({${params.selectorValue}}): {{e}}")\n`;
+      code += `        ${params.elementVariable} = None # Ensure variable exists\n`;
+      code += `else:\n`;
+      code += `    print("WebDriver instance (${params.driverVariable}) not available. Skipping Find Element.")\n`;
+      code += `    ${params.elementVariable} = None`; // Ensure variable exists
+      return code;
+    }
+  },
+  {
+    id: 'selenium_click_element',
+    name: 'Click Element (Selenium)',
+    description: 'Clicks a previously found web element.',
+    icon: MousePointerClick,
+    category: 'Web Automation (Selenium)',
+    parameters: [
+      { id: 'elementVariable', name: 'Element to Click', type: 'string', defaultValue: 'web_element', placeholder: 'Variable holding the element' },
+    ],
+    codeTemplate: (params) => `if ${params.elementVariable}:\n    print(f"Attempting to click element '{params.elementVariable}'.")\n    try:\n        ${params.elementVariable}.click()\n        print("Element clicked.")\n    except Exception as e:\n        print(f"Error clicking element '{params.elementVariable}': {{e}}")\nelse:\n    print(f"Element variable '${params.elementVariable}' is None or not available. Skipping click.")`
+  },
+  {
+    id: 'selenium_send_keys',
+    name: 'Send Keys to Element (Selenium)',
+    description: 'Sends keystrokes to a web element (e.g., typing in an input field).',
+    icon: Type,
+    category: 'Web Automation (Selenium)',
+    parameters: [
+      { id: 'elementVariable', name: 'Element to Type In', type: 'string', defaultValue: 'web_element', placeholder: 'Variable holding the element' },
+      { id: 'textToSend', name: 'Text to Send', type: 'string', defaultValue: 'Hello, Selenium!', placeholder: 'Enter text or variable name' },
+    ],
+    codeTemplate: (params) => `if ${params.elementVariable}:\n    print(f"Attempting to send keys {${params.textToSend}} to element '{params.elementVariable}'.")\n    try:\n        ${params.elementVariable}.send_keys(${params.textToSend})\n        print("Keys sent.")\n    except Exception as e:\n        print(f"Error sending keys to element '{params.elementVariable}': {{e}}")\nelse:\n    print(f"Element variable '${params.elementVariable}' is None or not available. Skipping send keys.")`
+  },
+  {
+    id: 'selenium_get_text',
+    name: 'Get Text from Element (Selenium)',
+    description: 'Retrieves the text content of a web element.',
+    icon: Baseline,
+    category: 'Web Automation (Selenium)',
+    parameters: [
+      { id: 'elementVariable', name: 'Element to Get Text From', type: 'string', defaultValue: 'web_element', placeholder: 'Variable holding the element' },
+      { id: 'textVariable', name: 'Store Text In', type: 'string', defaultValue: 'element_text', placeholder: 'Variable name for the extracted text' },
+    ],
+    codeTemplate: (params) => `if ${params.elementVariable}:\n    print(f"Attempting to get text from element '{params.elementVariable}'.")\n    try:\n        ${params.textVariable} = ${params.elementVariable}.text\n        print(f"Text retrieved: {{${params.textVariable}}}. Stored in '{params.textVariable}'.")\n    except Exception as e:\n        print(f"Error getting text from element '{params.elementVariable}': {{e}}")\n        ${params.textVariable} = None\nelse:\n    print(f"Element variable '${params.elementVariable}' is None or not available. Skipping get text.")\n    ${params.textVariable} = None`
+  },
+  {
+    id: 'selenium_close_driver',
+    name: 'Close WebDriver (Selenium)',
+    description: 'Closes the browser and terminates the WebDriver session.',
+    icon: Power,
+    category: 'Web Automation (Selenium)',
+    parameters: [
+      { id: 'driverVariable', name: 'WebDriver Instance', type: 'string', defaultValue: 'driver', placeholder: 'Variable holding WebDriver' },
+    ],
+    codeTemplate: (params) => `if '${params.driverVariable}' in locals() and ${params.driverVariable}:\n    print(f"Closing WebDriver instance '{params.driverVariable}'.")\n    try:\n        ${params.driverVariable}.quit()\n        print("WebDriver closed.")\n    except Exception as e:\n        print(f"Error closing WebDriver: {{e}}")\nelse:\n    print(f"WebDriver instance '${params.driverVariable}' not found or already closed. Skipping close.")`
+  },
 ];
 
 function generateCodeRecursive(
@@ -359,6 +534,7 @@ function generateCodeRecursive(
 ): string[] {
   const lines: string[] = [];
   const indent = '    '.repeat(indentLevel);
+  // Create a new Set for each level of recursion to manage scope correctly for variables defined within loops/children
   let blockScopedDefinedVariables = new Set(currentDefinedVariables);
 
   blocks.forEach(canvasBlock => {
@@ -368,17 +544,37 @@ function generateCodeRecursive(
 
       for (const paramDef of blockDefinition.parameters) {
         const paramId = paramDef.id;
-        const rawValue = canvasBlock.params[paramId] ?? paramDef.defaultValue;
+        let rawValue = canvasBlock.params[paramId] ?? paramDef.defaultValue;
 
-        if (paramId === 'variableName' || paramId === 'loopVariable' || paramId === 'responseVariable' || paramId === 'outputVar' || paramId === 'dataFrameVariable') {
-          processedParams[paramId] = rawValue;
-          continue;
+        // Trim rawValue if it's a string, as spaces can affect variable name matching
+        if (typeof rawValue === 'string') {
+          rawValue = rawValue.trim();
         }
         
-        // Special handling for pyautogui_click optional coordinates - allow empty string to mean None
+        // Parameters that are explicitly variable names (like where to store output)
+        // or control flow variables (like loop iterators) should be passed as is.
+        const isVariableNameParam = ['variableName', 'loopVariable', 'responseVariable', 'outputVar', 
+                                   'dataFrameVariable', 'driverVariable', 'elementVariable', 'textVariable'].includes(paramId);
+
+        if (isVariableNameParam) {
+          processedParams[paramId] = rawValue; // Pass raw value, it's a variable name
+          // Add to defined variables if this block defines it
+            if (paramId === 'variableName' && blockDefinition.id === 'define_variable') blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'variableName' && blockDefinition.id === 'read_file') blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'responseVariable' && blockDefinition.id === 'http_request') blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'outputVar' && blockDefinition.id === 'custom_function' && rawValue) blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'variableName' && blockDefinition.id === 'pyautogui_screenshot' && rawValue) blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'variableName' && blockDefinition.id === 'pandas_read_csv') blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'driverVariable' && blockDefinition.id === 'selenium_initialize_driver') blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'elementVariable' && blockDefinition.id === 'selenium_find_element') blockScopedDefinedVariables.add(rawValue);
+            if (paramId === 'textVariable' && blockDefinition.id === 'selenium_get_text') blockScopedDefinedVariables.add(rawValue);
+          continue; 
+        }
+        
+        // Special handling for pyautogui_click optional coordinates
         if (blockDefinition.id === 'pyautogui_click' && (paramId === 'x_coord' || paramId === 'y_coord')) {
-            if (rawValue.trim() === '' || rawValue === '""') {
-                 processedParams[paramId] = '""'; // Will be handled in template to convert to None or omit
+            if (rawValue === '' || rawValue === '""') {
+                 processedParams[paramId] = '""'; // Template handles this for None or omission
             } else if (blockScopedDefinedVariables.has(rawValue)) {
                 processedParams[paramId] = rawValue;
             } else if (isNumeric(rawValue)) {
@@ -388,10 +584,10 @@ function generateCodeRecursive(
             }
             continue;
         }
-         // Special handling for pyautogui_screenshot filename - allow empty for no save
+        // Special handling for pyautogui_screenshot filename
         if (blockDefinition.id === 'pyautogui_screenshot' && paramId === 'filename') {
-           if (rawValue.trim() === '' || rawValue === '""') {
-             processedParams[paramId] = '""'; // Represents no file, handled in template
+           if (rawValue === '' || rawValue === '""') {
+             processedParams[paramId] = '""'; 
            } else if (blockScopedDefinedVariables.has(rawValue)) {
              processedParams[paramId] = rawValue;
            } else {
@@ -400,7 +596,7 @@ function generateCodeRecursive(
            continue;
         }
 
-
+        // Value for "Define Variable" block
         if (blockDefinition.id === 'define_variable' && paramId === 'value') {
           if (blockScopedDefinedVariables.has(rawValue)) {
             processedParams[paramId] = rawValue;
@@ -409,13 +605,16 @@ function generateCodeRecursive(
           } else {
             processedParams[paramId] = formatPythonStringLiteral(rawValue);
           }
-        } else if (paramDef.type === 'textarea') {
-          if (blockScopedDefinedVariables.has(rawValue.trim())) {
-             processedParams[paramId] = rawValue.trim();
+        } 
+        // Textarea parameters
+        else if (paramDef.type === 'textarea') {
+          if (blockScopedDefinedVariables.has(rawValue)) {
+             processedParams[paramId] = rawValue;
           } else {
+            // For HTTP body, keep it as multiline string if methods are POST/PUT/PATCH
             if (blockDefinition.id === 'http_request' && paramId === 'body') {
-                const methodParam = blockDefinition.parameters.find(p => p.id === 'method');
-                const currentMethod = (canvasBlock.params[methodParam!.id] ?? methodParam!.defaultValue).toUpperCase();
+                const methodParamDef = blockDefinition.parameters.find(p => p.id === 'method');
+                const currentMethod = (canvasBlock.params[methodParamDef!.id] ?? methodParamDef!.defaultValue).toUpperCase();
                 const bodyRelevantMethods = ['POST', 'PUT', 'PATCH'];
                 if (bodyRelevantMethods.includes(currentMethod)) {
                     processedParams[paramId] = formatPythonMultilineStringLiteral(rawValue);
@@ -426,7 +625,9 @@ function generateCodeRecursive(
                  processedParams[paramId] = formatPythonMultilineStringLiteral(rawValue);
             }
           }
-        } else if (blockScopedDefinedVariables.has(rawValue)) {
+        } 
+        // General case: if it's a defined variable, use it, otherwise format as literal
+        else if (blockScopedDefinedVariables.has(rawValue)) {
           processedParams[paramId] = rawValue;
         } else {
           if (paramDef.type === 'string' || paramDef.type === 'password' || paramDef.type === 'select') {
@@ -435,22 +636,19 @@ function generateCodeRecursive(
             if (isNumeric(rawValue)) {
               processedParams[paramId] = rawValue; 
             } else {
-              // If not numeric, treat as string, as it might be a variable placeholder for a number.
-              // The template should then handle this, or an error would occur in Python.
-              // For now, we will stringify it to avoid direct Python errors from non-quoted non-numbers.
-              // Ideally, a more robust type checking or variable resolution would occur.
+              // If a number field contains non-numeric that isn't a known var, quote it as string.
+              // This might lead to Python errors if used in math, but prevents direct syntax errors.
               processedParams[paramId] = formatPythonStringLiteral(rawValue);
             }
           } else {
+            // Default to string literal for unknown or other types if not a variable
             processedParams[paramId] = formatPythonStringLiteral(rawValue);
           }
         }
       }
       
+      // For custom_function args, pass the raw string as user typed it.
       if (blockDefinition.id === 'custom_function' && processedParams.args) {
-         // For custom_function args, we want to pass the raw string as user typed it,
-         // as it might contain multiple arguments, some variables, some literals.
-         // The template itself doesn't need further processing of this specific 'args' field.
          processedParams.args = canvasBlock.params.args ?? blockDefinition.parameters.find(p=>p.id === 'args')!.defaultValue;
       }
 
@@ -461,30 +659,16 @@ function generateCodeRecursive(
           lines.push(indent + line);
         });
 
-        // Register defined variables for scope
-        if (blockDefinition.id === 'define_variable') {
-          const varName = canvasBlock.params.variableName;
-          if (varName) blockScopedDefinedVariables.add(varName.trim());
-        } else if (blockDefinition.id === 'read_file') {
-          const varName = canvasBlock.params.variableName;
-           if (varName) blockScopedDefinedVariables.add(varName.trim());
-        } else if (blockDefinition.id === 'http_request') {
-          const varName = canvasBlock.params.responseVariable;
-           if (varName) blockScopedDefinedVariables.add(varName.trim());
-        } else if (blockDefinition.id === 'custom_function' && canvasBlock.params.outputVar) {
-           const varName = canvasBlock.params.outputVar;
-           if (varName) blockScopedDefinedVariables.add(varName.trim());
-        } else if (blockDefinition.id === 'pyautogui_screenshot' && canvasBlock.params.variableName) {
-            const varName = canvasBlock.params.variableName;
-            if (varName) blockScopedDefinedVariables.add(varName.trim());
-        } else if (blockDefinition.id === 'pandas_read_csv') {
-            const varName = canvasBlock.params.variableName;
-            if (varName) blockScopedDefinedVariables.add(varName.trim());
+        // Add to defined variables for the rest of this scope and children
+        // This logic is now partly handled above during parameter processing.
+        // Explicitly add loop variables to scope for children.
+        if (blockDefinition.id === 'loop_range' && canvasBlock.params.loopVariable) {
+          blockScopedDefinedVariables.add(canvasBlock.params.loopVariable.trim());
         }
-
 
         if (blockDefinition.canHaveChildren) {
           if (canvasBlock.children && canvasBlock.children.length > 0) {
+            // Pass the current blockScopedDefinedVariables to children
             lines.push(...generateCodeRecursive(canvasBlock.children, availableBlocks, indentLevel + 1, blockScopedDefinedVariables));
           } else {
             lines.push(indent + '    pass');
@@ -507,11 +691,12 @@ export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks:
 
   const codeLines: string[] = [
     '# Visual Script Generated Code',
-    '# Note: Some blocks might require specific libraries (e.g., requests for HTTP, pyautogui, pandas).',
-    '# Make sure to install them using pip: pip install requests pyautogui pandas',
+    '# Note: Some blocks might require specific libraries (e.g., requests, pyautogui, pandas, selenium).',
+    '# Make sure to install them using pip: pip install requests pyautogui pandas selenium webdriver-manager',
     ''
   ];
 
+  // Initialize with an empty set of defined variables for the global scope
   codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0, new Set<string>()));
   return codeLines.join('\n');
 }
