@@ -46,8 +46,8 @@ Para executar esta aplicação em seu ambiente local, siga os passos abaixo:
 
 ### Pré-requisitos
 
-*   Node.js (versão 18.x ou superior recomendada)
-*   npm (geralmente vem com o Node.js) ou Yarn
+*   Node.js (versão `18.x` ou superior recomendada)
+*   `npm` (geralmente vem com o Node.js) ou `yarn`
 
 ### Passos para Instalação e Execução
 
@@ -62,7 +62,7 @@ Para executar esta aplicação em seu ambiente local, siga os passos abaixo:
     ```bash
     npm install
     ```
-    Ou, se você usa Yarn:
+    Ou, se você usa `yarn`:
     ```bash
     yarn install
     ```
@@ -72,7 +72,7 @@ Para executar esta aplicação em seu ambiente local, siga os passos abaixo:
     ```bash
     npm run dev
     ```
-    Ou, com Yarn:
+    Ou, com `yarn`:
     ```bash
     yarn dev
     ```
@@ -80,7 +80,7 @@ Para executar esta aplicação em seu ambiente local, siga os passos abaixo:
 
 4.  **Acesse no Navegador**:
     Abra seu navegador e acesse:
-    [http://localhost:9002](http://localhost:9002)
+    `http://localhost:9002`
 
     Você deverá ver a interface do Visual Script pronta para uso.
 
