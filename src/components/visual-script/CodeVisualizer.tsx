@@ -4,12 +4,14 @@
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 interface CodeVisualizerProps {
   code: string;
   width: number;
 }
+
+const COMMENT_REGEX = /^\s*#/;
 
 export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
   const [displayCode, setDisplayCode] = useState(code);
@@ -24,6 +26,19 @@ export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
     return () => clearTimeout(timer);
   }, [code]);
 
+  const formattedCodeLines = useMemo(() => {
+    return displayCode.split('\n').map((line, index) => {
+      if (COMMENT_REGEX.test(line)) {
+        return (
+          <span key={index} className="text-comment">
+            {line}
+          </span>
+        );
+      }
+      return <span key={index}>{line}</span>;
+    });
+  }, [displayCode]);
+
   return (
     <aside 
       className="h-full border-l bg-card flex flex-col shadow-lg overflow-hidden"
@@ -37,7 +52,11 @@ export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
       <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
         <ScrollArea className="flex-1">
           <pre className={`p-4 text-sm whitespace-pre-wrap break-all transition-opacity duration-150 ${isFading ? 'opacity-50' : 'opacity-100'}`}>
-            <code>{displayCode}</code>
+            <code>
+              {formattedCodeLines.map((line, index) => (
+                <div key={index}>{line}</div>
+              ))}
+            </code>
           </pre>
         </ScrollArea>
       </CardContent>

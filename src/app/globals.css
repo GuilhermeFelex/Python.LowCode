@@ -48,6 +48,9 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 216 20% 88%;
     --sidebar-ring: 270 70% 60%;
+
+    /* Added for comment highlighting */
+    --comment: 145 58% 35%; /* Darker green for light theme */
   }
 
   .dark {
@@ -93,6 +96,9 @@
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 224 20% 25%;
     --sidebar-ring: 270 70% 70%;
+
+    /* Added for comment highlighting */
+    --comment: 145 50% 65%; /* Lighter green for dark theme */
   }
 }
 
