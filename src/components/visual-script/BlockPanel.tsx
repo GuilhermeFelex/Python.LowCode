@@ -2,7 +2,7 @@
 // src/components/visual-script/BlockPanel.tsx
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Block } from '@/types/visual-script';
 import { ScriptBlock } from './ScriptBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -51,15 +51,19 @@ export function BlockPanel({
     return Array.from(new Set(filteredBlocks.map(block => block.category))).sort();
   }, [filteredBlocks]);
 
-  // Update defaultAccordionValues to open categories that have search results
-  const defaultAccordionValues = useMemo(() => {
+  const initialOrFilteredOpenCategories = useMemo(() => {
     if (!searchTerm.trim()) {
-      // If no search term, open all categories that have blocks
       return Array.from(new Set(availableBlocks.map(block => block.category)));
     }
-    // If there is a search term, open all categories that appear in the filtered results
     return categories;
   }, [categories, searchTerm, availableBlocks]);
+
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(initialOrFilteredOpenCategories);
+
+  useEffect(() => {
+    setOpenAccordionItems(initialOrFilteredOpenCategories);
+  }, [initialOrFilteredOpenCategories]);
+
 
   return (
     <aside className="w-72 min-w-72 h-full border-r bg-card flex flex-col shadow-lg">
@@ -94,10 +98,15 @@ export function BlockPanel({
         {filteredBlocks.length === 0 && searchTerm.trim() && (
           <p className="p-4 text-sm text-muted-foreground text-center">No blocks found matching "{searchTerm}".</p>
         )}
-        <Accordion type="multiple" value={defaultAccordionValues} className="w-full p-4">
+        <Accordion 
+          type="multiple" 
+          value={openAccordionItems}
+          onValueChange={setOpenAccordionItems}
+          className="w-full p-4"
+        >
           {categories.map(category => {
             const blocksInCategory = filteredBlocks.filter(b => b.category === category);
-            if (blocksInCategory.length === 0) return null; // Don't render category if no blocks match filter
+            if (blocksInCategory.length === 0) return null;
 
             return (
               <AccordionItem value={category} key={category} className="border-b-0 mb-2 last:mb-0">
