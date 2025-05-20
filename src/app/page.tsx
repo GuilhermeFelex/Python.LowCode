@@ -28,152 +28,71 @@ export default function VisualScriptPage() {
     }
   }, [canvasBlocks, isClient]);
 
-  const findBlockRecursive = (
-    blocks: CanvasBlock[],
-    instanceId: string
-  ): { block: CanvasBlock | null; path: string[] } => {
-    for (let i = 0; i < blocks.length; i++) {
-      const block = blocks[i];
-      if (block.instanceId === instanceId) {
-        return { block, path: [i.toString()] };
-      }
-      if (block.children) {
-        const foundInChildren = findBlockRecursive(block.children, instanceId);
-        if (foundInChildren.block) {
-          return {
-            block: foundInChildren.block,
-            path: [i.toString(), ...foundInChildren.path],
-          };
-        }
-      }
-    }
-    return { block: null, path: [] };
-  };
-
-  const removeBlockRecursive = (
-    blocks: CanvasBlock[],
-    instanceId: string
-  ): { removedBlock: CanvasBlock | null; updatedBlocks: CanvasBlock[] } => {
-    let removedBlock: CanvasBlock | null = null;
-    const remainingBlocks = blocks.filter((block) => {
-      if (block.instanceId === instanceId) {
-        removedBlock = block;
-        return false;
-      }
-      return true;
-    });
-
-    if (removedBlock) {
-      return { removedBlock, updatedBlocks: remainingBlocks };
-    }
-
-    const updatedBlocks = remainingBlocks.map((block) => {
-      if (block.children) {
-        const result = removeBlockRecursive(block.children, instanceId);
-        if (result.removedBlock) {
-          removedBlock = result.removedBlock;
-          return { ...block, children: result.updatedBlocks };
-        }
-      }
-      return block;
-    });
-
-    return { removedBlock, updatedBlocks };
-  };
-
-  const insertBlockRecursive = (
-    blocks: CanvasBlock[],
-    blockToInsert: CanvasBlock,
-    targetParentId: string | null,
-    insertBeforeId: string | null
-  ): CanvasBlock[] => {
-    if (targetParentId === null) { // Inserting at root level
-      let newBlocks = [...blocks];
-      if (insertBeforeId) {
-        const targetIndex = newBlocks.findIndex(b => b.instanceId === insertBeforeId);
-        if (targetIndex !== -1) {
-          newBlocks.splice(targetIndex, 0, blockToInsert);
-        } else {
-          newBlocks.push(blockToInsert); // Fallback: append if target not found
-        }
-      } else {
-        newBlocks.push(blockToInsert);
-      }
-      return newBlocks;
-    }
-
-    // Inserting into a child list
-    return blocks.map(block => {
-      if (block.instanceId === targetParentId) {
-        let newChildren = block.children ? [...block.children] : [];
-        if (insertBeforeId) {
-          const targetIndex = newChildren.findIndex(b => b.instanceId === insertBeforeId);
-          if (targetIndex !== -1) {
-            newChildren.splice(targetIndex, 0, blockToInsert);
-          } else {
-            newChildren.push(blockToInsert); // Fallback: append if target not found
-          }
-        } else {
-          newChildren.push(blockToInsert);
-        }
-        return { ...block, children: newChildren, isCollapsed: false }; // Ensure parent is expanded
-      }
-      if (block.children) {
-        return {
-          ...block,
-          children: insertBlockRecursive(block.children, blockToInsert, targetParentId, insertBeforeId),
-        };
-      }
-      return block;
-    });
-  };
-
-
-  const handleBlockDrop = (
-    event: DragEvent<HTMLDivElement>,
-    targetParentId: string | null, // ID of the parent block, or null for root
-    insertBeforeId: string | null  // ID of the block to insert before, or null to append
-  ) => {
+  const handleBlockDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation();
+    // Only handle new blocks from the palette
+    const blockTypeId = event.dataTransfer.getData('blockTypeId');
+    if (!blockTypeId || !isClient) return;
 
-    const newBlockTypeId = event.dataTransfer.getData('newBlockTypeId');
-    const reorderInstanceId = event.dataTransfer.getData('reorderInstanceId');
+    const blockType = AVAILABLE_BLOCKS.find(b => b.id === blockTypeId);
+    if (!blockType) return;
 
-    if (newBlockTypeId && isClient) {
-      const blockType = AVAILABLE_BLOCKS.find(b => b.id === newBlockTypeId);
-      if (!blockType) return;
+    const initialParams: Record<string, string> = {};
+    blockType.parameters.forEach(p => {
+      initialParams[p.id] = p.defaultValue;
+    });
 
-      const initialParams: Record<string, string> = {};
-      blockType.parameters.forEach(p => {
-        initialParams[p.id] = p.defaultValue;
-      });
+    const newBlock: CanvasBlock = {
+      instanceId: `block_${crypto.randomUUID()}`,
+      blockTypeId: blockType.id,
+      params: initialParams,
+      isCollapsed: false,
+      ...(blockType.canHaveChildren && { children: [] }),
+    };
 
-      const newBlock: CanvasBlock = {
-        instanceId: `block_${crypto.randomUUID()}`,
-        blockTypeId: blockType.id,
-        params: initialParams,
-        isCollapsed: false,
-        ...(blockType.canHaveChildren && { children: [] }),
-      };
-      setCanvasBlocks(prevBlocks => insertBlockRecursive(prevBlocks, newBlock, targetParentId, insertBeforeId));
+    const target = event.target as HTMLElement;
+    const dropZone = target.closest<HTMLElement>('[data-is-drop-zone="true"]');
+    const parentInstanceId = dropZone?.dataset.instanceId;
 
-    } else if (reorderInstanceId && isClient) {
-      if (reorderInstanceId === targetParentId || reorderInstanceId === insertBeforeId) return; // Prevent dropping a block onto itself
-
-      const { removedBlock, updatedBlocks: blocksAfterRemoval } = removeBlockRecursive(canvasBlocks, reorderInstanceId);
-      if (removedBlock) {
-        // Check if trying to drop a parent into its own child (or sub-child)
-        if (targetParentId) {
-            const { block: targetParentBlock } = findBlockRecursive([removedBlock], targetParentId);
-            if (targetParentBlock) {
-                toast({ title: "Invalid Move", description: "Cannot move a parent block into one of its own children.", variant: "destructive" });
-                setCanvasBlocks(canvasBlocks); // Revert to original state if invalid move
-                return;
+    if (parentInstanceId) {
+      setCanvasBlocks(prevBlocks => {
+        const addRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
+          return blocks.map(block => {
+            if (block.instanceId === parentInstanceId) {
+              const parentDef = AVAILABLE_BLOCKS.find(b => b.id === block.blockTypeId);
+              if (parentDef?.canHaveChildren) {
+                return {
+                  ...block,
+                  children: [...(block.children || []), newBlock],
+                  isCollapsed: false, 
+                };
+              }
             }
+            if (block.children && block.children.length > 0) {
+              return { ...block, children: addRecursive(block.children) };
+            }
+            return block;
+          });
+        };
+        
+        const originalBlocksJson = JSON.stringify(prevBlocks);
+        const updatedBlocks = addRecursive(prevBlocks);
+
+        // If addRecursive didn't modify (e.g. parent couldn't have children), add to root.
+        if (JSON.stringify(updatedBlocks) === originalBlocksJson) {
+          // Check if the drop target itself was the main canvas or a non-child-accepting area
+          // For simplicity, if not added to a child, add to root if the drop target indicates so.
+          // This check ensures we don't duplicate if drop target was ambiguous but not a valid child zone
+          if (!dropZone) { // if dropZone is null, it's the main canvas
+             return [...prevBlocks, newBlock];
+          }
+          return updatedBlocks; // No change if it was a dropzone of a non-nestable parent
         }
-        setCanvasBlocks(insertBlockRecursive(blocksAfterRemoval, removedBlock, targetParentId, insertBeforeId));
-      }
+        return updatedBlocks;
+      });
+    } else {
+      // Dropped on main canvas background
+      setCanvasBlocks(prevBlocks => [...prevBlocks, newBlock]);
     }
   };
 
@@ -193,8 +112,23 @@ export default function VisualScriptPage() {
   };
 
   const handleRemoveBlock = (instanceId: string) => {
-    const { updatedBlocks } = removeBlockRecursive(canvasBlocks, instanceId);
-    setCanvasBlocks(updatedBlocks);
+    const removeRecursive = (blocks: CanvasBlock[]): { updatedBlocks: CanvasBlock[], blockFound: boolean } => {
+      let blockFound = false;
+      const updatedBlocks = blocks.filter(block => {
+        if (block.instanceId === instanceId) {
+          blockFound = true;
+          return false;
+        }
+        if (block.children && block.children.length > 0) {
+          const result = removeRecursive(block.children);
+          block.children = result.updatedBlocks;
+          if (result.blockFound) blockFound = true;
+        }
+        return true;
+      });
+      return { updatedBlocks, blockFound };
+    };
+    setCanvasBlocks(prev => removeRecursive(prev).updatedBlocks);
   };
 
   const handleToggleBlockCollapse = (instanceId: string) => {

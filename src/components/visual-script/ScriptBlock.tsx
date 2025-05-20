@@ -27,8 +27,8 @@ interface ScriptBlockProps {
   onParamChange?: (instanceId: string, paramId: string, value: string) => void;
   onRemove?: (instanceId: string) => void;
   onToggleCollapse?: (instanceId: string) => void;
-  onBlockDrop?: (event: DragEvent<HTMLDivElement>, targetParentId: string | null, insertBeforeId: string | null) => void;
-  parentId?: string | null; // ID of the parent block, or null if root
+  onBlockDrop?: (event: DragEvent<HTMLDivElement>) => void; // Reverted signature
+  // parentId prop removed
 }
 
 export function ScriptBlock({
@@ -39,57 +39,36 @@ export function ScriptBlock({
   onRemove,
   onToggleCollapse,
   onBlockDrop,
-  parentId,
 }: ScriptBlockProps) {
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
-    event.stopPropagation(); // Prevent parent drag handlers if nested
     if (isPaletteBlock) {
-      event.dataTransfer.setData('newBlockTypeId', blockDefinition.id);
+      event.dataTransfer.setData('blockTypeId', blockDefinition.id); // Use 'blockTypeId' for new blocks
       event.dataTransfer.effectAllowed = 'move';
-    } else if (canvasBlockInstance) {
-      event.dataTransfer.setData('reorderInstanceId', canvasBlockInstance.instanceId);
-      event.dataTransfer.effectAllowed = 'move';
+    } else {
+      // Blocks on the canvas are not draggable for reordering in this reverted state
+      event.preventDefault();
     }
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation();
-    const isReorder = event.dataTransfer.types.includes('reorderinstanceid');
-    const isNewBlock = event.dataTransfer.types.includes('newblocktypeid');
-    
-    // Prevent dropping on itself or its own definition if it's a reorder
-    if (isReorder && canvasBlockInstance) {
-        const draggedInstanceId = event.dataTransfer.getData('reorderinstanceid');
-        if (draggedInstanceId === canvasBlockInstance.instanceId) {
-            event.dataTransfer.dropEffect = 'none';
-            return;
-        }
-    }
-    
-    if (isReorder || isNewBlock) {
+    event.stopPropagation(); // Allow dropping into child zones
+    // Only allow dropping if a new block is being dragged from the palette
+    if (event.dataTransfer.types.includes('blocktypeid')) {
         event.dataTransfer.dropEffect = 'move';
     } else {
         event.dataTransfer.dropEffect = 'none';
     }
   };
 
-  // Drop on the block itself (to insert before it)
-  const handleDropOnSelf = (event: DragEvent<HTMLDivElement>) => {
-    if (isPaletteBlock || !canvasBlockInstance || !onBlockDrop) return;
-    event.preventDefault();
-    event.stopPropagation();
-    onBlockDrop(event, parentId, canvasBlockInstance.instanceId);
-  };
-
-  // Drop in the child area of this block
+  // This handler is for dropping new blocks (from palette) into a child area
   const handleDropInChildrenArea = (event: DragEvent<HTMLDivElement>) => {
     if (isPaletteBlock || !canvasBlockInstance || !blockDefinition.canHaveChildren || !onBlockDrop) return;
-     // Only handle drops if they occur directly on the drop zone, not on child blocks within it.
+    // Ensure the drop is directly on the drop zone, not a child block within it.
     if (event.target === event.currentTarget) {
         event.preventDefault();
-        event.stopPropagation();
-        onBlockDrop(event, canvasBlockInstance.instanceId, null); // Append to this block's children
+        event.stopPropagation(); // Prevent event from bubbling to parent canvas/block
+        onBlockDrop(event); // Call the main drop handler from page.tsx
     }
   };
 
@@ -182,13 +161,12 @@ export function ScriptBlock({
 
   return (
     <Card
-      draggable={true} // All blocks are draggable
+      draggable={isPaletteBlock} // Only palette blocks are draggable
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver} // Allow dropping on the block itself
-      onDrop={handleDropOnSelf}   // Handle drop on the block itself
+      // No onDragOver or onDrop for the Card itself related to reordering
       className={cardClasses}
       aria-label={`${blockDefinition.name} block`}
-      data-instance-id={canvasBlockInstance?.instanceId}
+      data-instance-id={canvasBlockInstance?.instanceId} // Used by parent drop logic to identify this block
     >
       <CardHeader className="flex flex-row items-center justify-between p-3 bg-muted/50 rounded-t-lg">
         <div className="flex items-center gap-2 flex-grow">
@@ -245,8 +223,8 @@ export function ScriptBlock({
                 data-instance-id={canvasBlockInstance.instanceId}
                 data-is-drop-zone="true"
                 className="m-2 p-3 border border-dashed border-accent/50 rounded-md min-h-[60px] bg-background/30 space-y-2"
-                onDragOver={handleDragOver} // Allow dropping in child area
-                onDrop={handleDropInChildrenArea} // Handle drop in child area
+                onDragOver={handleDragOver} 
+                onDrop={handleDropInChildrenArea} // For dropping new blocks into this child area
               >
                 {canvasBlockInstance.children && canvasBlockInstance.children.length > 0 ? (
                   canvasBlockInstance.children.map(childBlock => {
@@ -261,8 +239,7 @@ export function ScriptBlock({
                         onParamChange={onParamChange}
                         onRemove={onRemove}
                         onToggleCollapse={onToggleCollapse}
-                        onBlockDrop={onBlockDrop} // Pass down the main drop handler
-                        parentId={canvasBlockInstance.instanceId} // Pass current block's ID as parentId
+                        onBlockDrop={onBlockDrop} // Pass down main drop handler for nested drops
                       />
                     );
                   })

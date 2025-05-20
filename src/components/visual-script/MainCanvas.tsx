@@ -12,7 +12,7 @@ import { SquareDashedMousePointer } from 'lucide-react';
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
   availableBlocks: Block[];
-  onBlockDrop: (event: DragEvent<HTMLDivElement>, targetParentId: string | null, insertBeforeId: string | null) => void;
+  onBlockDrop: (event: DragEvent<HTMLDivElement>) => void; // Reverted signature
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
   onToggleBlockCollapse: (instanceId: string) => void;
@@ -28,20 +28,18 @@ export function MainCanvas({
 }: MainCanvasProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const isReorder = event.dataTransfer.types.includes('reorderinstanceid');
-    const isNewBlock = event.dataTransfer.types.includes('newblocktypeid');
-    if (isReorder || isNewBlock) {
+    // Only allow dropping if a new block is being dragged from the palette
+    if (event.dataTransfer.types.includes('blocktypeid')) {
         event.dataTransfer.dropEffect = 'move';
     } else {
         event.dataTransfer.dropEffect = 'none';
     }
   };
 
-  const handleDropOnCanvasBackground = (event: DragEvent<HTMLDivElement>) => {
-    // Only handle drops if they occur directly on the ScrollArea background, not on child elements.
-    if (event.target === event.currentTarget) {
-      onBlockDrop(event, null, null); // targetParentId is null for root, insertBeforeId is null to append
-    }
+  // Pass the event to the main handler in page.tsx
+  const handleDropOnCanvas = (event: DragEvent<HTMLDivElement>) => {
+    // page.tsx's onBlockDrop will check event.target to see if it's a child zone or main canvas
+    onBlockDrop(event);
   };
 
   return (
@@ -55,7 +53,7 @@ export function MainCanvas({
       <ScrollArea
         className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"
         onDragOver={handleDragOver}
-        onDrop={handleDropOnCanvasBackground}
+        onDrop={handleDropOnCanvas} // Main drop handler for the canvas area
         aria-label="Main script canvas"
       >
         <div className="p-6 space-y-4 min-h-full">
@@ -78,8 +76,8 @@ export function MainCanvas({
                 onParamChange={onParamChange}
                 onRemove={onRemoveBlock}
                 onToggleCollapse={onToggleBlockCollapse}
-                onBlockDrop={onBlockDrop}
-                parentId={null} // Root blocks have null parentId
+                onBlockDrop={onBlockDrop} // Pass main onBlockDrop for child drop zones
+                // parentId prop removed
               />
             );
           })}
