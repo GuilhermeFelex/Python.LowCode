@@ -89,7 +89,6 @@ export function BlockPanel({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <p className="text-xs text-muted-foreground">Drag blocks to the canvas</p>
       </header>
       <ScrollArea className="flex-1">
         {filteredBlocks.length === 0 && searchTerm.trim() && (
