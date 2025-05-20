@@ -1,3 +1,4 @@
+
 import type { Block, CanvasBlock } from '@/types/visual-script';
 import { Terminal, FileText, Repeat, Puzzle, Webhook, FunctionSquare, Variable } from 'lucide-react';
 
@@ -9,7 +10,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     icon: Terminal,
     category: 'Output',
     parameters: [
-      { id: 'message', name: 'Message', type: 'string', defaultValue: 'Hello, Visual Script!', placeholder: 'Enter message' },
+      { id: 'message', name: 'Message', type: 'string', defaultValue: 'Hello World', placeholder: 'Enter message' },
     ],
     codeTemplate: (params) => `print(f"${params.message}")`,
   },
@@ -126,3 +127,4 @@ export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks:
   codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0));
   return codeLines.join('\n');
 }
+
