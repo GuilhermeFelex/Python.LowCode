@@ -53,14 +53,17 @@ export function BlockPanel({
 
   const initialOrFilteredOpenCategories = useMemo(() => {
     if (!searchTerm.trim()) {
+      // If no search term, all categories that *exist* in availableBlocks should be open by default
       return Array.from(new Set(availableBlocks.map(block => block.category)));
     }
+    // If there is a search term, only categories with matching blocks should be open
     return categories;
   }, [categories, searchTerm, availableBlocks]);
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(initialOrFilteredOpenCategories);
 
   useEffect(() => {
+    // Update open items when the search term changes or initial categories change
     setOpenAccordionItems(initialOrFilteredOpenCategories);
   }, [initialOrFilteredOpenCategories]);
 
@@ -110,7 +113,7 @@ export function BlockPanel({
 
             return (
               <AccordionItem value={category} key={category} className="border-b-0 mb-2 last:mb-0">
-                <AccordionTrigger className="py-2 px-3 rounded-md hover:bg-muted/50 hover:no-underline text-sm font-medium text-muted-foreground uppercase tracking-wider [&[data-state=open]>svg]:text-primary">
+                <AccordionTrigger className="py-2 px-3 rounded-md hover:bg-muted/50 hover:no-underline text-sm font-medium text-muted-foreground tracking-wider [&[data-state=open]>svg]:text-primary">
                   <div className="flex items-center justify-between w-full">
                     <span>{category}</span>
                     <Badge variant="secondary" className="ml-2">

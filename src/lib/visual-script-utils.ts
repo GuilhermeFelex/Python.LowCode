@@ -39,7 +39,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Read File',
     description: 'Reads content from a specified file.',
     icon: FileText,
-    category: 'File IO',
+    category: 'File I/O', // Changed from 'File IO'
     parameters: [
       { id: 'filePath', name: 'File Path', type: 'string', defaultValue: './my_file.txt', placeholder: 'e.g., /path/to/file.txt or variable' },
       { id: 'variableName', name: 'Store in Variable', type: 'string', defaultValue: 'file_content', placeholder: 'Variable name' },
