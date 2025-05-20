@@ -1,3 +1,4 @@
+
 # Visual Script - Construtor Visual de Scripts Python
 
 Bem-vindo ao **Visual Script**! Esta é uma aplicação Next.js projetada para permitir que você construa visualmente scripts Python usando blocos arrastáveis. É uma ferramenta intuitiva para aprender programação ou prototipar scripts de forma rápida.
@@ -53,9 +54,10 @@ Para executar esta aplicação em seu ambiente local, siga os passos abaixo:
 
 1.  **Clone o Repositório** (se você ainda não o fez):
     ```bash
-    git clone <url_do_repositorio>
-    cd <nome_do_diretorio_do_projeto>
+    git clone https://github.com/GuilhermeFelex/Python.LowCode
+    cd Python.LowCode 
     ```
+    *(Se você clonou para um diretório com outro nome, use esse nome no comando `cd`)*
 
 2.  **Instale as Dependências**:
     Abra seu terminal na pasta do projeto e execute:
