@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 import { GripVertical, X, CornerDownRight, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Block, CanvasBlock, ParameterDefinition } from '@/types/visual-script';
 import { AVAILABLE_BLOCKS } from '@/lib/visual-script-utils'; 
@@ -52,17 +53,36 @@ export function ScriptBlock({
     if (!canvasBlockInstance || !onParamChange) return null;
 
     return blockDefinition.parameters.map((paramDef: ParameterDefinition) => {
+      // Conditional rendering logic
+      if (paramDef.condition) {
+        const controllingParamValue = canvasBlockInstance.params[paramDef.condition.paramId];
+        const conditionValue = paramDef.condition.paramValue;
+        let conditionMet = false;
+        if (Array.isArray(conditionValue)) {
+          conditionMet = conditionValue.includes(controllingParamValue);
+        } else {
+          conditionMet = controllingParamValue === conditionValue;
+        }
+        if (!conditionMet) {
+          return null; // Don't render if condition not met
+        }
+      }
+
+      const inputId = `${canvasBlockInstance.instanceId}-${paramDef.id}`;
+      const currentValue = canvasBlockInstance.params[paramDef.id] ?? paramDef.defaultValue ?? '';
+
+
       if (paramDef.type === 'select') {
         return (
           <div key={paramDef.id} className="mb-3">
-            <Label htmlFor={`${canvasBlockInstance.instanceId}-${paramDef.id}`} className="text-xs font-medium">
+            <Label htmlFor={inputId} className="text-xs font-medium">
               {paramDef.name}
             </Label>
             <Select
-              value={canvasBlockInstance.params[paramDef.id] || paramDef.defaultValue}
+              value={currentValue}
               onValueChange={(value) => onParamChange!(canvasBlockInstance!.instanceId, paramDef.id, value)}
             >
-              <SelectTrigger id={`${canvasBlockInstance.instanceId}-${paramDef.id}`} className="mt-1 h-8 text-sm">
+              <SelectTrigger id={inputId} className="mt-1 h-8 text-sm">
                 <SelectValue placeholder={paramDef.placeholder || `Select ${paramDef.name}`} />
               </SelectTrigger>
               <SelectContent>
@@ -75,17 +95,33 @@ export function ScriptBlock({
             </Select>
           </div>
         );
+      } else if (paramDef.type === 'textarea') {
+        return (
+          <div key={paramDef.id} className="mb-3">
+            <Label htmlFor={inputId} className="text-xs font-medium">
+              {paramDef.name}
+            </Label>
+            <Textarea
+              id={inputId}
+              value={currentValue}
+              onChange={(e) => onParamChange!(canvasBlockInstance!.instanceId, paramDef.id, e.target.value)}
+              placeholder={paramDef.placeholder || paramDef.defaultValue}
+              className="mt-1 text-sm min-h-[60px]"
+              rows={3}
+            />
+          </div>
+        );
       }
-      // Default to text/number input
+      // Default to text/number/password input
       return (
         <div key={paramDef.id} className="mb-3">
-          <Label htmlFor={`${canvasBlockInstance.instanceId}-${paramDef.id}`} className="text-xs font-medium">
+          <Label htmlFor={inputId} className="text-xs font-medium">
             {paramDef.name}
           </Label>
           <Input
-            id={`${canvasBlockInstance.instanceId}-${paramDef.id}`}
-            type={paramDef.type === 'number' ? 'number' : 'text'}
-            value={canvasBlockInstance.params[paramDef.id] || ''}
+            id={inputId}
+            type={paramDef.type === 'number' ? 'number' : paramDef.type === 'password' ? 'password' : 'text'}
+            value={currentValue}
             onChange={(e) => onParamChange!(canvasBlockInstance!.instanceId, paramDef.id, e.target.value)}
             placeholder={paramDef.placeholder || paramDef.defaultValue}
             className="mt-1 h-8 text-sm"
