@@ -2,15 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Next.js dev server",
+      "name": "Run Next.js dev server (Local & Web IDEs)",
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run dev",
+      // This command starts the Next.js development server as defined in your package.json.
+      // It's suitable for both local VS Code and web-based VS Code environments
+      // (e.g., GitHub Codespaces, Gitpod, Project IDX).
+      // Web IDEs typically auto-forward the port (default 9002 for this project) and
+      // the 'serverReadyAction' below helps in automatically opening the application.
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "serverReadyAction": {
+        // This pattern matches the Next.js server ready message in the console.
         "pattern": "- Local:\\s+(http://localhost:9002)",
+        // The matched URL (http://localhost:9002) will be used.
         "uriFormat": "%s",
+        // 'openExternally' instructs VS Code to open this URL.
+        // In web IDEs, this usually opens the correctly proxied public URL.
         "action": "openExternally"
       }
     }
