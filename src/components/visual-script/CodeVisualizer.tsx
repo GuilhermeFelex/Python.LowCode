@@ -1,3 +1,4 @@
+
 // src/components/visual-script/CodeVisualizer.tsx
 "use client";
 
@@ -7,10 +8,10 @@ import { useEffect, useState } from 'react';
 
 interface CodeVisualizerProps {
   code: string;
+  width: number;
 }
 
-export function CodeVisualizer({ code }: CodeVisualizerProps) {
-  // Add a subtle transition effect when code changes
+export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
   const [displayCode, setDisplayCode] = useState(code);
   const [isFading, setIsFading] = useState(false);
 
@@ -19,13 +20,17 @@ export function CodeVisualizer({ code }: CodeVisualizerProps) {
     const timer = setTimeout(() => {
       setDisplayCode(code);
       setIsFading(false);
-    }, 150); // Duration of fade-out part of transition
+    }, 150); 
     return () => clearTimeout(timer);
   }, [code]);
 
   return (
-    <aside className="w-96 min-w-96 h-full border-l bg-card flex flex-col shadow-lg">
-      <CardHeader className="border-b">
+    <aside 
+      className="h-full border-l bg-card flex flex-col shadow-lg overflow-hidden"
+      style={{ width: `${width}px`, minWidth: `${width}px` }} // Apply dynamic width
+      aria-live="polite"
+    >
+      <CardHeader className="border-b flex-shrink-0">
         <CardTitle className="text-lg font-semibold text-foreground">Code Visualizer</CardTitle>
         <p className="text-xs text-muted-foreground">Real-time Python code generation</p>
       </CardHeader>

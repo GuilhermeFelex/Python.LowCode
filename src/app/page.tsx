@@ -2,7 +2,7 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useEffect, type DragEvent } from 'react';
+import { useState, useEffect, type DragEvent, useCallback, useRef } from 'react';
 import { BlockPanel } from '@/components/visual-script/BlockPanel';
 import { MainCanvas } from '@/components/visual-script/MainCanvas';
 import { CodeVisualizer } from '@/components/visual-script/CodeVisualizer';
@@ -17,6 +17,14 @@ export default function VisualScriptPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
+  const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384); // Default w-96 (24rem * 16px/rem)
+  const minVisualizerWidth = 200; // Minimum width for the visualizer
+  const maxVisualizerWidth = 800; // Maximum width for the visualizer
+
+  const isResizing = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -30,7 +38,6 @@ export default function VisualScriptPage() {
 
   const handleBlockDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    // Only handle new blocks from the palette
     const blockTypeId = event.dataTransfer.getData('blockTypeId');
     if (!blockTypeId || !isClient) return;
 
@@ -78,20 +85,15 @@ export default function VisualScriptPage() {
         const originalBlocksJson = JSON.stringify(prevBlocks);
         const updatedBlocks = addRecursive(prevBlocks);
 
-        // If addRecursive didn't modify (e.g. parent couldn't have children), add to root.
         if (JSON.stringify(updatedBlocks) === originalBlocksJson) {
-          // Check if the drop target itself was the main canvas or a non-child-accepting area
-          // For simplicity, if not added to a child, add to root if the drop target indicates so.
-          // This check ensures we don't duplicate if drop target was ambiguous but not a valid child zone
-          if (!dropZone) { // if dropZone is null, it's the main canvas
+          if (!dropZone) { 
              return [...prevBlocks, newBlock];
           }
-          return updatedBlocks; // No change if it was a dropzone of a non-nestable parent
+          return updatedBlocks; 
         }
         return updatedBlocks;
       });
     } else {
-      // Dropped on main canvas background
       setCanvasBlocks(prevBlocks => [...prevBlocks, newBlock]);
     }
   };
@@ -200,6 +202,46 @@ export default function VisualScriptPage() {
     }
   };
 
+  const handleMouseDownOnResizer = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isClient) return;
+    event.preventDefault(); 
+    isResizing.current = true;
+    dragStartX.current = event.clientX;
+    dragStartWidth.current = codeVisualizerWidth;
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [isClient, codeVisualizerWidth]);
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+        if (!isResizing.current) return;
+        const dx = event.clientX - dragStartX.current;
+        let newWidth = dragStartWidth.current + dx;
+        newWidth = Math.max(minVisualizerWidth, Math.min(newWidth, maxVisualizerWidth));
+        setCodeVisualizerWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+        if (!isResizing.current) return;
+        isResizing.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    };
+  }, [isClient, minVisualizerWidth, maxVisualizerWidth]);
+
 
   if (!isClient) {
     return null;
@@ -222,7 +264,16 @@ export default function VisualScriptPage() {
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
       />
-      <CodeVisualizer code={generatedCode} />
+      <div 
+        className="w-2 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
+        onMouseDown={handleMouseDownOnResizer}
+        role="separator"
+        aria-label="Resize code visualizer panel"
+        title="Resize panel"
+      >
+        <div className="w-0.5 h-8 bg-transparent group-hover:bg-primary/30 rounded-full transition-colors duration-150"></div>
+      </div>
+      <CodeVisualizer code={generatedCode} width={codeVisualizerWidth} />
     </div>
   );
 }
