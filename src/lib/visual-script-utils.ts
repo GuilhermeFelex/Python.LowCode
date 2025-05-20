@@ -52,17 +52,50 @@ export const AVAILABLE_BLOCKS: Block[] = [
     codeTemplate: (params) => `${params.variableName} = ${params.value}`,
   },
   {
-    id: 'http_get_request',
-    name: 'HTTP GET Request',
-    description: 'Makes an HTTP GET request to a URL.',
+    id: 'http_request', // Renamed from http_get_request
+    name: 'HTTP Request', // Updated name
+    description: 'Makes an HTTP request to a URL using a specified method.', // Updated description
     icon: Webhook,
     category: 'Network',
     parameters: [
+      { 
+        id: 'method', 
+        name: 'Method', 
+        type: 'select', 
+        defaultValue: 'GET',
+        options: [
+          { value: 'GET', label: 'GET' },
+          { value: 'POST', label: 'POST' },
+          { value: 'PUT', label: 'PUT' },
+          { value: 'DELETE', label: 'DELETE' },
+          { value: 'PATCH', label: 'PATCH' },
+        ]
+      },
       { id: 'url', name: 'URL', type: 'string', defaultValue: 'https://api.example.com/data', placeholder: 'https://...' },
       { id: 'responseVariable', name: 'Store Response In', type: 'string', defaultValue: 'response_data', placeholder: 'Variable name' },
+      // Future enhancement: add a 'body' parameter conditionally shown for POST/PUT
     ],
-    // This is a simplified example; actual HTTP requests in Python need a library like 'requests'
-    codeTemplate: (params) => `# Requires 'requests' library: pip install requests\n# import requests\n# ${params.responseVariable} = requests.get("${params.url}").json() \nprint(f"Simulated GET request to {${params.url}}, storing in {${params.responseVariable}}")`,
+    codeTemplate: (params) => {
+      const method = params.method || 'GET';
+      const url = params.url;
+      const responseVar = params.responseVariable;
+      
+      let codeLines = [
+        `# Requires 'requests' library: pip install requests`,
+        `# import requests`
+      ];
+      
+      let actionLine = `# ${responseVar} = requests.${method.toLowerCase()}("${url}"`;
+      if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+        actionLine += `, json={"key": "value"} # Replace with your actual data payload`;
+      }
+      actionLine += `).json() # Or .text, .content, etc. based on expected response`;
+      
+      codeLines.push(actionLine);
+      codeLines.push(`print(f"Simulated ${method} request to {${url}}. Response would be in {${responseVar}}")`);
+      
+      return codeLines.join('\n');
+    },
   },
   {
     id: 'custom_function',
@@ -93,8 +126,11 @@ function generateCodeRecursive(blocks: CanvasBlock[], availableBlocks: Block[], 
     const blockDefinition = availableBlocks.find(b => b.id === canvasBlock.blockTypeId);
     if (blockDefinition) {
       try {
-        let generatedLine = blockDefinition.codeTemplate(canvasBlock.params);
-        lines.push(indent + generatedLine);
+        // Split multiline templates and indent each line
+        const generatedBlockCode = blockDefinition.codeTemplate(canvasBlock.params);
+        generatedBlockCode.split('\n').forEach(line => {
+          lines.push(indent + line);
+        });
 
         if (blockDefinition.canHaveChildren) {
           if (canvasBlock.children && canvasBlock.children.length > 0) {
@@ -127,4 +163,3 @@ export function generatePythonCode(canvasBlocks: CanvasBlock[], availableBlocks:
   codeLines.push(...generateCodeRecursive(canvasBlocks, availableBlocks, 0));
   return codeLines.join('\n');
 }
-

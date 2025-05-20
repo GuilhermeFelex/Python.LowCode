@@ -4,9 +4,10 @@ import type React from 'react';
 export interface ParameterDefinition {
   id: string;
   name: string; // Changed from label to name for consistency
-  type: 'string' | 'number' | 'boolean'; // Add more types as needed
+  type: 'string' | 'number' | 'boolean' | 'select'; // Add more types as needed
   defaultValue: string;
   placeholder?: string;
+  options?: { value: string; label: string }[]; // For select type
 }
 
 export interface Block {

@@ -10,6 +10,13 @@ import { Button } from '@/components/ui/button';
 import { GripVertical, X, CornerDownRight, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Block, CanvasBlock, ParameterDefinition } from '@/types/visual-script';
 import { AVAILABLE_BLOCKS } from '@/lib/visual-script-utils'; 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ScriptBlockProps {
   blockDefinition: Block;
@@ -44,21 +51,48 @@ export function ScriptBlock({
   const renderParameterInputs = () => {
     if (!canvasBlockInstance || !onParamChange) return null;
 
-    return blockDefinition.parameters.map((paramDef: ParameterDefinition) => (
-      <div key={paramDef.id} className="mb-3">
-        <Label htmlFor={`${canvasBlockInstance.instanceId}-${paramDef.id}`} className="text-xs font-medium">
-          {paramDef.name}
-        </Label>
-        <Input
-          id={`${canvasBlockInstance.instanceId}-${paramDef.id}`}
-          type={paramDef.type === 'number' ? 'number' : 'text'}
-          value={canvasBlockInstance.params[paramDef.id] || ''}
-          onChange={(e) => onParamChange(canvasBlockInstance.instanceId, paramDef.id, e.target.value)}
-          placeholder={paramDef.placeholder || paramDef.defaultValue}
-          className="mt-1 h-8 text-sm"
-        />
-      </div>
-    ));
+    return blockDefinition.parameters.map((paramDef: ParameterDefinition) => {
+      if (paramDef.type === 'select') {
+        return (
+          <div key={paramDef.id} className="mb-3">
+            <Label htmlFor={`${canvasBlockInstance.instanceId}-${paramDef.id}`} className="text-xs font-medium">
+              {paramDef.name}
+            </Label>
+            <Select
+              value={canvasBlockInstance.params[paramDef.id] || paramDef.defaultValue}
+              onValueChange={(value) => onParamChange!(canvasBlockInstance!.instanceId, paramDef.id, value)}
+            >
+              <SelectTrigger id={`${canvasBlockInstance.instanceId}-${paramDef.id}`} className="mt-1 h-8 text-sm">
+                <SelectValue placeholder={paramDef.placeholder || `Select ${paramDef.name}`} />
+              </SelectTrigger>
+              <SelectContent>
+                {paramDef.options?.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      }
+      // Default to text/number input
+      return (
+        <div key={paramDef.id} className="mb-3">
+          <Label htmlFor={`${canvasBlockInstance.instanceId}-${paramDef.id}`} className="text-xs font-medium">
+            {paramDef.name}
+          </Label>
+          <Input
+            id={`${canvasBlockInstance.instanceId}-${paramDef.id}`}
+            type={paramDef.type === 'number' ? 'number' : 'text'}
+            value={canvasBlockInstance.params[paramDef.id] || ''}
+            onChange={(e) => onParamChange!(canvasBlockInstance!.instanceId, paramDef.id, e.target.value)}
+            placeholder={paramDef.placeholder || paramDef.defaultValue}
+            className="mt-1 h-8 text-sm"
+          />
+        </div>
+      );
+    });
   };
 
   const cardClasses = `w-full transition-all duration-150 ease-in-out shadow-md hover:shadow-lg ${
