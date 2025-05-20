@@ -20,6 +20,7 @@ export default function VisualScriptPage() {
   const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384); 
   const minVisualizerWidth = 200; 
   const maxVisualizerWidth = 800; 
+  const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true);
 
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
@@ -35,6 +36,10 @@ export default function VisualScriptPage() {
       setGeneratedCode(code);
     }
   }, [canvasBlocks, isClient]);
+
+  const toggleCodeVisualizer = () => {
+    setIsCodeVisualizerVisible(prev => !prev);
+  };
 
   const handleBlockDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -71,7 +76,7 @@ export default function VisualScriptPage() {
                 return {
                   ...block,
                   children: [...(block.children || []), newBlock],
-                  isCollapsed: false, // Ensure parent expands when child is added
+                  isCollapsed: false, 
                 };
               }
             }
@@ -86,9 +91,6 @@ export default function VisualScriptPage() {
         const updatedBlocks = addRecursive(prevBlocks);
 
         if (JSON.stringify(updatedBlocks) === originalBlocksJson) {
-          // If parentInstanceId was set, it means a specific child drop zone was targeted.
-          // If addRecursive didn't change anything, it means the block wasn't added to that child.
-          // We should not add it to the root in this case. We just return the original blocks.
           if (!dropZone) { 
              return [...prevBlocks, newBlock];
           }
@@ -97,7 +99,6 @@ export default function VisualScriptPage() {
         return updatedBlocks;
       });
     } else {
-      // No parentInstanceId means the drop was on the main canvas background.
       setCanvasBlocks(prevBlocks => [...prevBlocks, newBlock]);
     }
   };
@@ -259,6 +260,8 @@ export default function VisualScriptPage() {
         onCopyCode={handleCopyCode}
         onSaveFile={handleSaveToFile}
         isCodeCopied={copied}
+        isCodeVisualizerVisible={isCodeVisualizerVisible}
+        toggleCodeVisualizer={toggleCodeVisualizer}
       />
       <MainCanvas
         canvasBlocks={canvasBlocks}
@@ -268,16 +271,20 @@ export default function VisualScriptPage() {
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
       />
-      <div 
-        className="w-1 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
-        onMouseDown={handleMouseDownOnResizer}
-        role="separator"
-        aria-label="Resize code visualizer panel"
-        title="Resize panel"
-      >
-        <div className="w-0.5 h-8 bg-transparent group-hover:bg-primary/30 rounded-full transition-colors duration-150"></div>
-      </div>
-      <CodeVisualizer code={generatedCode} width={codeVisualizerWidth} />
+      {isCodeVisualizerVisible && (
+        <>
+          <div 
+            className="w-1 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
+            onMouseDown={handleMouseDownOnResizer}
+            role="separator"
+            aria-label="Resize code visualizer panel"
+            title="Resize panel"
+          >
+            <div className="w-0.5 h-8 bg-transparent group-hover:bg-primary/30 rounded-full transition-colors duration-150"></div>
+          </div>
+          <CodeVisualizer code={generatedCode} width={codeVisualizerWidth} />
+        </>
+      )}
     </div>
   );
 }

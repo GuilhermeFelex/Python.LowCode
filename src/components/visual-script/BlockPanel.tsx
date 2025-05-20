@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Copy, Check, Download, Search } from 'lucide-react';
+import { Play, Copy, Check, Download, Search, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -23,6 +23,8 @@ interface BlockPanelProps {
   onCopyCode: () => void;
   onSaveFile: () => void;
   isCodeCopied: boolean;
+  isCodeVisualizerVisible: boolean;
+  toggleCodeVisualizer: () => void;
 }
 
 export function BlockPanel({
@@ -31,6 +33,8 @@ export function BlockPanel({
   onCopyCode,
   onSaveFile,
   isCodeCopied,
+  isCodeVisualizerVisible,
+  toggleCodeVisualizer,
 }: BlockPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -53,17 +57,14 @@ export function BlockPanel({
 
   const initialOrFilteredOpenCategories = useMemo(() => {
     if (!searchTerm.trim()) {
-      // If no search term, all categories that *exist* in availableBlocks should be open by default
       return Array.from(new Set(availableBlocks.map(block => block.category)));
     }
-    // If there is a search term, only categories with matching blocks should be open
     return categories;
   }, [categories, searchTerm, availableBlocks]);
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(initialOrFilteredOpenCategories);
 
   useEffect(() => {
-    // Update open items when the search term changes or initial categories change
     setOpenAccordionItems(initialOrFilteredOpenCategories);
   }, [initialOrFilteredOpenCategories]);
 
@@ -73,6 +74,16 @@ export function BlockPanel({
       <header className="p-4 border-b space-y-3">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold text-foreground">Blocks</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCodeVisualizer}
+            className="h-7 w-7"
+            aria-label={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
+            title={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
+          >
+            {isCodeVisualizerVisible ? <PanelRightClose /> : <PanelRightOpen />}
+          </Button>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Button onClick={onSimulate} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">
