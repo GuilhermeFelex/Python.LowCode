@@ -265,7 +265,7 @@ export default function VisualScriptPage() {
         onToggleBlockCollapse={handleToggleBlockCollapse}
       />
       <div 
-        className="w-2 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
+        className="w-1 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
         onMouseDown={handleMouseDownOnResizer}
         role="separator"
         aria-label="Resize code visualizer panel"
