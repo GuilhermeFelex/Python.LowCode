@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Copy, Check, Download, Search, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { Play, Copy, Check, Download, Search } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -23,8 +23,6 @@ interface BlockPanelProps {
   onCopyCode: () => void;
   onSaveFile: () => void;
   isCodeCopied: boolean;
-  isCodeVisualizerVisible: boolean;
-  toggleCodeVisualizer: () => void;
 }
 
 export function BlockPanel({
@@ -33,8 +31,6 @@ export function BlockPanel({
   onCopyCode,
   onSaveFile,
   isCodeCopied,
-  isCodeVisualizerVisible,
-  toggleCodeVisualizer,
 }: BlockPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -55,6 +51,7 @@ export function BlockPanel({
     return Array.from(new Set(filteredBlocks.map(block => block.category))).sort();
   }, [filteredBlocks]);
 
+  // Determine which categories should be open based on search or default
   const initialOrFilteredOpenCategories = useMemo(() => {
     if (!searchTerm.trim()) {
       // Default to all categories from the original availableBlocks list if no search term
@@ -64,10 +61,11 @@ export function BlockPanel({
     return categories;
   }, [categories, searchTerm, availableBlocks]);
 
+  // State to manage accordion open items
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(initialOrFilteredOpenCategories);
 
+  // Effect to update open items when the search term changes or initial categories are determined
   useEffect(() => {
-    // Update open items when the search term changes or initial categories are determined
     setOpenAccordionItems(initialOrFilteredOpenCategories);
   }, [initialOrFilteredOpenCategories]);
 
@@ -77,16 +75,7 @@ export function BlockPanel({
       <header className="p-4 border-b space-y-3">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold text-foreground">Blocks</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleCodeVisualizer}
-            className="h-7 w-7"
-            aria-label={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
-            title={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
-          >
-            {isCodeVisualizerVisible ? <PanelRightClose /> : <PanelRightOpen />}
-          </Button>
+          {/* Toggle button removed from here */}
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Button onClick={onSimulate} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">
@@ -97,7 +86,7 @@ export function BlockPanel({
             {isCodeCopied ? 'Copied' : 'Copy'}
           </Button>
           <Button onClick={onSaveFile} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">
-            <Download className="h-3 w-3" /> Save
+            <Download className="mr-1 h-3 w-3" /> Save
           </Button>
         </div>
         <div className="relative">
@@ -117,8 +106,8 @@ export function BlockPanel({
         )}
         <Accordion 
           type="multiple" 
-          value={openAccordionItems}
-          onValueChange={setOpenAccordionItems}
+          value={openAccordionItems} // Controlled component
+          onValueChange={setOpenAccordionItems} // Handler to update state
           className="w-full p-4"
         >
           {categories.map(category => {

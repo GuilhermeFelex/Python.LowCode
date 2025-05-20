@@ -87,18 +87,36 @@ export default function VisualScriptPage() {
           });
         };
         
+        // My check to see if the block was actually added to a child or needs to go to root
         const originalBlocksJson = JSON.stringify(prevBlocks);
         const updatedBlocks = addRecursive(prevBlocks);
 
+        // If updatedBlocks is same as original, and there was no specific dropZone target,
+        // it means we tried to drop on a child area but it wasn't a valid one,
+        // or it was a block that cannot have children but was somehow marked as drop zone (should not happen with current logic).
+        // OR, if the dropZone was the canvas itself (no parentInstanceId), this condition won't apply.
+        // This check primarily ensures that if a child drop fails to nest, it doesn't just vanish.
+        // However, the primary logic for adding to root if not parentInstanceId is below.
         if (JSON.stringify(updatedBlocks) === originalBlocksJson) {
-          if (!dropZone) { 
+          // This can happen if we drop on a block that *is* a drop zone but for some reason
+          // the block doesn't get added (e.g. parentDef.canHaveChildren was false, which it shouldn't be for a drop zone)
+          // OR if we drop on the main canvas directly (dropZone might be null or the canvas itself)
+          // The `else` part below handles adding to the root if parentInstanceId is falsy.
+          // If parentInstanceId existed but block wasn't added, it might mean it was dropped on a block that isn't a valid parent.
+          // Let's ensure it goes to the root if dropZone is not a valid child drop target.
+           if (!dropZone) { // If no specific drop zone, add to root. This means it was dropped on main canvas padding.
              return [...prevBlocks, newBlock];
           }
-          return updatedBlocks; 
+          // If dropZone existed but addRecursive didn't change anything, it implies an issue or non-nestable target.
+          // For robustness, let's only add to root if dropZone.dataset.isCanvasRoot or similar, or if no dropZone.
+          // For now, if it's a specific child drop zone and fails, we rely on addRecursive not adding.
+          // Adding to root if parentInstanceId was present but addRecursive failed is not intended here.
+          return updatedBlocks; // Return what addRecursive did, even if it's no change.
         }
         return updatedBlocks;
       });
     } else {
+      // This is the case for dropping directly onto the main canvas (not a child zone)
       setCanvasBlocks(prevBlocks => [...prevBlocks, newBlock]);
     }
   };
@@ -207,23 +225,34 @@ export default function VisualScriptPage() {
     }
   };
 
+  // Handler for mousedown on the resizer
   const handleMouseDownOnResizer = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (!isClient) return;
-    event.preventDefault(); 
+    event.preventDefault(); // Prevent text selection during drag
     isResizing.current = true;
     dragStartX.current = event.clientX;
     dragStartWidth.current = codeVisualizerWidth;
 
+    // Apply styles to body to improve resize experience
     document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
+    document.body.style.userSelect = 'none'; // Prevent text selection globally
   }, [isClient, codeVisualizerWidth]);
 
+  // Effect for handling mousemove and mouseup on the document
   useEffect(() => {
     if (!isClient) return;
 
     const handleMouseMove = (event: MouseEvent) => {
         if (!isResizing.current) return;
         const dx = event.clientX - dragStartX.current;
+        // Corrected logic: dragging left should decrease panel width, dragging right should increase.
+        // This interpretation is for a right-side panel being resized from its left edge.
+        // If CodeVisualizer is on the right, moving mouse left means dx is negative.
+        // newWidth = dragStartWidth - dx. If dx is -50 (mouse moved left), newWidth = startWidth - (-50) = startWidth + 50.
+        // This makes the right panel (CodeVisualizer) wider.
+        // If dx is +50 (mouse moved right), newWidth = startWidth - 50.
+        // This makes the right panel (CodeVisualizer) narrower.
+        // This is correct for resizing the right panel from its left edge.
         let newWidth = dragStartWidth.current - dx; // My fix for the resize direction.
         newWidth = Math.max(minVisualizerWidth, Math.min(newWidth, maxVisualizerWidth));
         setCodeVisualizerWidth(newWidth);
@@ -232,24 +261,29 @@ export default function VisualScriptPage() {
     const handleMouseUp = () => {
         if (!isResizing.current) return;
         isResizing.current = false;
+        // Reset body styles
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
     };
 
+    // Add event listeners to the document
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
 
+    // Cleanup function to remove event listeners
     return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        // Ensure styles are reset if component unmounts while resizing
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
     };
-  }, [isClient, minVisualizerWidth, maxVisualizerWidth]);
+  }, [isClient, minVisualizerWidth, maxVisualizerWidth]); // Dependencies include state used in handlers
 
 
   if (!isClient) {
-    return null;
+    // Return a simple loading state or null to prevent hydration mismatch issues
+    return null; // Or a loading skeleton
   }
 
   return (
@@ -260,8 +294,6 @@ export default function VisualScriptPage() {
         onCopyCode={handleCopyCode}
         onSaveFile={handleSaveToFile}
         isCodeCopied={copied}
-        isCodeVisualizerVisible={isCodeVisualizerVisible}
-        toggleCodeVisualizer={toggleCodeVisualizer}
       />
       <MainCanvas
         canvasBlocks={canvasBlocks}
@@ -270,6 +302,8 @@ export default function VisualScriptPage() {
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
+        isCodeVisualizerVisible={isCodeVisualizerVisible}
+        toggleCodeVisualizer={toggleCodeVisualizer}
       />
       {isCodeVisualizerVisible && (
         <>
@@ -280,6 +314,7 @@ export default function VisualScriptPage() {
             aria-label="Resize code visualizer panel"
             title="Resize panel"
           >
+            {/* Visual indicator for the resizer handle */}
             <div className="w-0.5 h-8 bg-transparent group-hover:bg-primary/30 rounded-full transition-colors duration-150"></div>
           </div>
           <CodeVisualizer code={generatedCode} width={codeVisualizerWidth} />
