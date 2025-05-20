@@ -7,8 +7,7 @@ import type { DragEvent } from 'react';
 import type { CanvasBlock, Block } from '@/types/visual-script';
 import { ScriptBlock } from './ScriptBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { SquareDashedMousePointer, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { SquareDashedMousePointer } from 'lucide-react';
 
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
@@ -17,8 +16,6 @@ interface MainCanvasProps {
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
   onToggleBlockCollapse: (instanceId: string) => void;
-  isCodeVisualizerVisible: boolean;
-  toggleCodeVisualizer: () => void;
 }
 
 export function MainCanvas({
@@ -28,8 +25,6 @@ export function MainCanvas({
   onParamChange,
   onRemoveBlock,
   onToggleBlockCollapse,
-  isCodeVisualizerVisible,
-  toggleCodeVisualizer,
 }: MainCanvasProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault(); 
@@ -43,15 +38,6 @@ export function MainCanvas({
           <h1 className="text-2xl font-bold text-primary">Visual Script Canvas</h1>
           <p className="text-sm text-muted-foreground">Construct your Python script by arranging blocks.</p>
         </div>
-        <Button 
-          onClick={toggleCodeVisualizer} 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 mt-1" 
-          aria-label={isCodeVisualizerVisible ? 'Hide Code Visualizer' : 'Show Code Visualizer'}
-        >
-          {isCodeVisualizerVisible ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
-        </Button>
       </header>
       <ScrollArea
         className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"

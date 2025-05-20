@@ -7,7 +7,7 @@ import { ScriptBlock } from './ScriptBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Play, Copy, Check, Download, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { Play, Copy, Check, Download } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -21,8 +21,6 @@ interface BlockPanelProps {
   onCopyCode: () => void;
   onSaveFile: () => void;
   isCodeCopied: boolean;
-  isCodeVisualizerVisible: boolean;
-  toggleCodeVisualizer: () => void;
 }
 
 export function BlockPanel({ 
@@ -31,8 +29,6 @@ export function BlockPanel({
   onCopyCode,
   onSaveFile,
   isCodeCopied,
-  isCodeVisualizerVisible,
-  toggleCodeVisualizer,
 }: BlockPanelProps) {
   const categories = Array.from(new Set(availableBlocks.map(block => block.category)));
 
@@ -44,15 +40,6 @@ export function BlockPanel({
       <header className="p-4 border-b">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-lg font-semibold text-foreground">Blocks</h2>
-          <Button 
-            onClick={toggleCodeVisualizer} 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7" 
-            aria-label={isCodeVisualizerVisible ? 'Hide Code Visualizer' : 'Show Code Visualizer'}
-          >
-            {isCodeVisualizerVisible ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-          </Button>
         </div>
         <div className="grid grid-cols-3 gap-2 mb-2">
           <Button onClick={onSimulate} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">

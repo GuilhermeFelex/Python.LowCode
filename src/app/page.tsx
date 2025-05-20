@@ -14,7 +14,6 @@ export default function VisualScriptPage() {
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasBlock[]>([]);
   const [generatedCode, setGeneratedCode] = useState<string>('');
   const [isClient, setIsClient] = useState(false);
-  const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
@@ -120,10 +119,6 @@ export default function VisualScriptPage() {
     setCanvasBlocks(prev => toggleRecursive(prev));
   };
 
-  const toggleCodeVisualizer = () => {
-    setIsCodeVisualizerVisible(prev => !prev);
-  };
-
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(generatedCode);
@@ -198,10 +193,8 @@ export default function VisualScriptPage() {
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
-        isCodeVisualizerVisible={isCodeVisualizerVisible}
-        toggleCodeVisualizer={toggleCodeVisualizer}
       />
-      {isCodeVisualizerVisible && <CodeVisualizer code={generatedCode} />}
+      <CodeVisualizer code={generatedCode} />
     </div>
   );
 }
