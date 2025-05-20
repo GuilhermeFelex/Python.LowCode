@@ -219,7 +219,7 @@ export default function VisualScriptPage() {
     const handleMouseMove = (event: MouseEvent) => {
         if (!isResizing.current) return;
         const dx = event.clientX - dragStartX.current;
-        let newWidth = dragStartWidth.current + dx;
+        let newWidth = dragStartWidth.current - dx; // Corrected logic for resizing
         newWidth = Math.max(minVisualizerWidth, Math.min(newWidth, maxVisualizerWidth));
         setCodeVisualizerWidth(newWidth);
     };
@@ -277,3 +277,4 @@ export default function VisualScriptPage() {
     </div>
   );
 }
+
