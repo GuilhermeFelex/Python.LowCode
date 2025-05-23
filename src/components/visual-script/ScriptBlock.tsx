@@ -39,30 +39,31 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   onBlockDrop,
 }) => {
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
+    event.stopPropagation(); // Stop propagation to prevent parent handlers if nested
     if (isPaletteBlock) {
       event.dataTransfer.setData('blockTypeId', blockDefinition.id);
-      event.dataTransfer.effectAllowed = 'move';
-    } else {
-      event.preventDefault();
+    } else if (canvasBlockInstance) {
+      event.dataTransfer.setData('draggedCanvasBlockId', canvasBlockInstance.instanceId);
     }
+    event.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    if (event.dataTransfer.types.includes('blocktypeid')) {
-        event.dataTransfer.dropEffect = 'move';
+    // Check if a block is being dragged from palette or canvas
+    if (event.dataTransfer.types.includes('blocktypeid') || event.dataTransfer.types.includes('draggedcanvasblockid')) {
+      event.dataTransfer.dropEffect = 'move';
     } else {
-        event.dataTransfer.dropEffect = 'none';
+      event.dataTransfer.dropEffect = 'none';
     }
   };
 
-  const handleDropInChildrenArea = (event: DragEvent<HTMLDivElement>) => {
-    if (isPaletteBlock || !canvasBlockInstance || !blockDefinition.canHaveChildren || !onBlockDrop) return;
-    if (event.target === event.currentTarget) {
-        event.preventDefault();
-        event.stopPropagation();
-        onBlockDrop(event);
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (onBlockDrop) {
+      onBlockDrop(event);
     }
   };
 
@@ -147,19 +148,22 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   };
 
   const cardClasses = `w-full transition-all duration-150 ease-in-out shadow-md hover:shadow-lg ${
-    isPaletteBlock ? 'cursor-grab active:cursor-grabbing' : 'bg-card'
+    isPaletteBlock ? 'cursor-grab active:cursor-grabbing' : 'bg-card cursor-move' // Make canvas blocks movable
   }`;
 
   const isDroppableChildArea = !isPaletteBlock && blockDefinition.canHaveChildren && canvasBlockInstance;
   const isCollapsed = canvasBlockInstance?.isCollapsed ?? false;
 
+  // Add data-instance-id to the root Card element for drop target identification
   return (
     <Card
-      draggable={isPaletteBlock}
+      draggable={true} // All blocks (palette and canvas) are draggable
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver} // Allow dropping onto the block itself (for reordering before it)
+      onDrop={handleDrop}       // Handle drop onto the block itself
       className={cardClasses}
       aria-label={`${blockDefinition.name} block`}
-      data-instance-id={canvasBlockInstance?.instanceId}
+      data-instance-id={canvasBlockInstance?.instanceId} // Used to identify this block as a potential drop target
     >
       <CardHeader className="flex flex-row items-center justify-between p-3 bg-muted/50 rounded-t-lg">
         <div className="flex items-center gap-2 flex-grow">
@@ -213,17 +217,16 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
           {isDroppableChildArea && (
             <CardContent className="p-0 border-t">
               <div
-                data-instance-id={canvasBlockInstance.instanceId}
+                data-instance-id={canvasBlockInstance.instanceId} // Parent's instanceId for child drop zone
                 data-is-drop-zone="true"
                 className="m-2 p-3 border border-dashed border-accent/50 rounded-md min-h-[60px] bg-background/30 space-y-2"
                 onDragOver={handleDragOver}
-                onDrop={handleDropInChildrenArea}
+                onDrop={handleDrop} // Let this also call the main onBlockDrop
               >
                 {canvasBlockInstance.children && canvasBlockInstance.children.length > 0 ? (
                   canvasBlockInstance.children.map(childBlock => {
                     const childBlockDef = AVAILABLE_BLOCKS.find(b => b.id === childBlock.blockTypeId);
                     if (!childBlockDef) return null;
-                    // Ensure correct props are passed for nested ScriptBlocks
                     return (
                       <ScriptBlock
                         key={childBlock.instanceId}
@@ -233,7 +236,7 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
                         onParamChange={onParamChange}
                         onRemove={onRemove}
                         onToggleCollapse={onToggleCollapse}
-                        onBlockDrop={onBlockDrop}
+                        onBlockDrop={onBlockDrop} // Pass down for nested reordering
                       />
                     );
                   })

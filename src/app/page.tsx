@@ -36,65 +36,140 @@ export default function VisualScriptPage() {
     }
   }, [canvasBlocks, isClient]);
 
+  // Helper function to find and remove a block recursively
+  const findAndRemoveBlockRecursive = useCallback((blocks: CanvasBlock[], idToRemove: string): { updatedBlocks: CanvasBlock[], removedBlock: CanvasBlock | null } => {
+    let removedBlock: CanvasBlock | null = null;
+    const updatedBlocks = blocks.filter(block => {
+      if (block.instanceId === idToRemove) {
+        removedBlock = block;
+        return false; // Remove this block
+      }
+      if (block.children && !removedBlock) { // If not found yet and block has children
+        const result = findAndRemoveBlockRecursive(block.children, idToRemove);
+        if (result.removedBlock) {
+          removedBlock = result.removedBlock;
+          block.children = result.updatedBlocks; // Update children of this block
+        }
+      }
+      return true; // Keep this block
+    });
+    return { updatedBlocks, removedBlock };
+  }, []);
+  
+  // Helper function to insert a block into a parent's children list
+  const insertIntoChildrenRecursive = useCallback((blocks: CanvasBlock[], parentId: string, blockToInsert: CanvasBlock): CanvasBlock[] => {
+    return blocks.map(block => {
+      if (block.instanceId === parentId) {
+        const parentDef = AVAILABLE_BLOCKS.find(b => b.id === block.blockTypeId);
+        if (parentDef?.canHaveChildren) {
+          return {
+            ...block,
+            children: [...(block.children || []), blockToInsert],
+            isCollapsed: false, // Ensure parent is expanded
+          };
+        }
+      }
+      if (block.children) {
+        return { ...block, children: insertIntoChildrenRecursive(block.children, parentId, blockToInsert) };
+      }
+      return block;
+    });
+  }, []);
+
+  // Helper function to insert a block before a target block in the same list
+  const insertBeforeRecursive = useCallback((blocks: CanvasBlock[], targetId: string, blockToInsert: CanvasBlock): { newBlocks: CanvasBlock[], inserted: boolean } => {
+    let inserted = false;
+    const newBlocks: CanvasBlock[] = [];
+    for (const block of blocks) {
+      if (block.instanceId === targetId && !inserted) {
+        newBlocks.push(blockToInsert);
+        inserted = true;
+      }
+      if (block.children && !inserted) {
+        const childResult = insertBeforeRecursive(block.children, targetId, blockToInsert);
+        if (childResult.inserted) {
+          newBlocks.push({ ...block, children: childResult.newBlocks });
+          inserted = true;
+          continue; // Skip adding original block if children were modified and target was among them
+        }
+      }
+      newBlocks.push(block);
+    }
+    return { newBlocks, inserted };
+  }, []);
+
+
   const handleBlockDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const blockTypeId = event.dataTransfer.getData('blockTypeId');
-    if (!blockTypeId || !isClient) return;
+    event.stopPropagation();
+    if (!isClient) return;
 
-    const blockType = AVAILABLE_BLOCKS.find(b => b.id === blockTypeId);
-    if (!blockType) return;
-
-    const initialParams: Record<string, string> = {};
-    blockType.parameters.forEach(p => {
-      initialParams[p.id] = p.defaultValue;
-    });
-
-    const newBlock: CanvasBlock = {
-      instanceId: `block_${crypto.randomUUID()}`,
-      blockTypeId: blockType.id,
-      params: initialParams,
-      isCollapsed: false,
-      ...(blockType.canHaveChildren && { children: [] }),
-    };
+    const newBlockTypeId = event.dataTransfer.getData('blockTypeId');
+    const draggedInstanceId = event.dataTransfer.getData('draggedCanvasBlockId');
 
     const target = event.target as HTMLElement;
-    const dropZone = target.closest<HTMLElement>('[data-is-drop-zone="true"]');
-    const parentInstanceId = dropZone?.dataset.instanceId;
+    const dropZoneElement = target.closest<HTMLElement>('[data-is-drop-zone="true"]');
+    const parentDropZoneInstanceId = dropZoneElement?.dataset.instanceId;
+    
+    // Find if the drop happened directly on a block card (for inserting before)
+    // Ensure we are not targeting the drop zone itself for this.
+    let directDropOnBlockInstanceId: string | undefined = undefined;
+    const potentialTargetCard = target.closest<HTMLElement>('[data-instance-id]');
+    if (potentialTargetCard && !potentialTargetCard.dataset.isDropZone) {
+        directDropOnBlockInstanceId = potentialTargetCard.dataset.instanceId;
+    }
+
 
     setCanvasBlocks(prevBlocks => {
-      if (parentInstanceId) {
-        const addRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
-          return blocks.map(block => {
-            if (block.instanceId === parentInstanceId) {
-              const parentDef = AVAILABLE_BLOCKS.find(b => b.id === block.blockTypeId);
-              if (parentDef?.canHaveChildren) {
-                return {
-                  ...block,
-                  children: [...(block.children || []), newBlock],
-                  isCollapsed: false,
-                };
-              }
-            }
-            if (block.children && block.children.length > 0) {
-              return { ...block, children: addRecursive(block.children) };
-            }
-            return block;
-          });
+      if (newBlockTypeId) { // Dragging a new block from the palette
+        const blockType = AVAILABLE_BLOCKS.find(b => b.id === newBlockTypeId);
+        if (!blockType) return prevBlocks;
+
+        const initialParams: Record<string, string> = {};
+        blockType.parameters.forEach(p => {
+          initialParams[p.id] = p.defaultValue;
+        });
+
+        const newBlock: CanvasBlock = {
+          instanceId: `block_${crypto.randomUUID()}`,
+          blockTypeId: blockType.id,
+          params: initialParams,
+          isCollapsed: false,
+          ...(blockType.canHaveChildren && { children: [] }),
         };
-        
-        const originalBlocksJson = JSON.stringify(prevBlocks);
-        const updatedBlocks = addRecursive(prevBlocks);
 
-        if (JSON.stringify(updatedBlocks) === originalBlocksJson && !dropZone) {
-           return [...prevBlocks, newBlock];
+        if (parentDropZoneInstanceId) { // Dropped into a child drop zone
+          return insertIntoChildrenRecursive(prevBlocks, parentDropZoneInstanceId, newBlock);
+        } else if (directDropOnBlockInstanceId && directDropOnBlockInstanceId !== newBlock.instanceId) { // Dropped on another block (insert before)
+            const result = insertBeforeRecursive(prevBlocks, directDropOnBlockInstanceId, newBlock);
+            return result.inserted ? result.newBlocks : [...prevBlocks, newBlock]; // Fallback to root if insertBefore failed
+        } else { // Dropped on main canvas
+          return [...prevBlocks, newBlock];
         }
-        return updatedBlocks;
 
-      } else {
-        return [...prevBlocks, newBlock];
+      } else if (draggedInstanceId) { // Reordering an existing block from the canvas
+        if (draggedInstanceId === parentDropZoneInstanceId || draggedInstanceId === directDropOnBlockInstanceId) {
+          return prevBlocks; // Dropping on self or its own dropzone
+        }
+
+        const { updatedBlocks: blocksAfterRemoval, removedBlock } = findAndRemoveBlockRecursive(prevBlocks, draggedInstanceId);
+        if (!removedBlock) return prevBlocks; // Should not happen if draggedInstanceId is valid
+
+        if (parentDropZoneInstanceId) { // Dropped into a child drop zone of another block
+          return insertIntoChildrenRecursive(blocksAfterRemoval, parentDropZoneInstanceId, removedBlock);
+        } else if (directDropOnBlockInstanceId) { // Dropped on another block (insert before it)
+           const result = insertBeforeRecursive(blocksAfterRemoval, directDropOnBlockInstanceId, removedBlock);
+           // If insertBeforeRecursive couldn't find the target (e.g. target was the dragged block itself, now removed),
+           // or if the target was a child and it handled it, use its result. Otherwise, append to root.
+           return result.inserted ? result.newBlocks : [...blocksAfterRemoval, removedBlock];
+        } else { // Dropped on main canvas (add to root)
+          return [...blocksAfterRemoval, removedBlock];
+        }
       }
+      return prevBlocks;
     });
-  }, [isClient]);
+  }, [isClient, findAndRemoveBlockRecursive, insertIntoChildrenRecursive, insertBeforeRecursive]);
+
 
   const handleParamChange = useCallback((instanceId: string, paramId: string, value: string) => {
     const updateRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
