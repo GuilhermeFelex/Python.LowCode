@@ -20,7 +20,7 @@ export default function VisualScriptPage() {
   const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384);
   const minVisualizerWidth = 200;
   const maxVisualizerWidth = 800;
-  const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true);
+  // const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true); // Removed
 
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
@@ -37,9 +37,9 @@ export default function VisualScriptPage() {
     }
   }, [canvasBlocks, isClient]);
 
-  const toggleCodeVisualizer = () => {
-    setIsCodeVisualizerVisible(prev => !prev);
-  };
+  // const toggleCodeVisualizer = () => { // Removed
+  //   setIsCodeVisualizerVisible(prev => !prev);
+  // };
 
   const handleBlockDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -76,7 +76,7 @@ export default function VisualScriptPage() {
                 return {
                   ...block,
                   children: [...(block.children || []), newBlock],
-                  isCollapsed: false,
+                  isCollapsed: false, // Ensure parent expands if a child is added
                 };
               }
             }
@@ -92,9 +92,15 @@ export default function VisualScriptPage() {
         const updatedBlocks = addRecursive(prevBlocks);
 
         if (JSON.stringify(updatedBlocks) === originalBlocksJson) {
-           if (!dropZone) {
+           // If not added to a child, and not explicitly dropped on a valid zone (e.g. canvas itself was target but not the dropzone div)
+           // it implies it should go to the root. This logic handles direct drop on canvas without a specific zone.
+           if (!dropZone) { // Corrected condition: if no dropZone, add to root
              return [...prevBlocks, newBlock];
           }
+          // If a dropZone was identified but the block wasn't added, it might be an invalid drop target (e.g., non-nestable block)
+          // In this case, the logic should have prevented the drop or it implies the block should still go to the root if not handled.
+          // However, the current logic would have already placed it if parentInstanceId was valid.
+          // If dropZone is present, it means it was dropped on a child zone.
           return updatedBlocks;
         }
         return updatedBlocks;
@@ -250,8 +256,8 @@ export default function VisualScriptPage() {
         onCopyCode={handleCopyCode}
         onSaveFile={handleSaveToFile}
         isCodeCopied={copied}
-        isCodeVisualizerVisible={isCodeVisualizerVisible}
-        toggleCodeVisualizer={toggleCodeVisualizer}
+        // isCodeVisualizerVisible={isCodeVisualizerVisible} // Removed
+        // toggleCodeVisualizer={toggleCodeVisualizer} // Removed
       />
       <MainCanvas
         canvasBlocks={canvasBlocks}
@@ -260,8 +266,10 @@ export default function VisualScriptPage() {
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
+        // isCodeVisualizerVisible={isCodeVisualizerVisible} // Removed
+        // toggleCodeVisualizer={toggleCodeVisualizer} // Removed
       />
-      {isCodeVisualizerVisible && (
+      {/* {isCodeVisualizerVisible && ( // Removed conditional rendering */}
         <>
           <div
             className="w-1 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
@@ -274,7 +282,7 @@ export default function VisualScriptPage() {
           </div>
           <CodeVisualizer code={generatedCode} width={codeVisualizerWidth} />
         </>
-      )}
+      {/* )} // Removed conditional rendering */}
     </div>
   );
 }

@@ -9,7 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Copy, Check, Download, Search, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { Copy, Check, Download, Search } from 'lucide-react';
+// import { PanelRightOpen, PanelRightClose } from 'lucide-react'; // Icons no longer used here
 import {
   Accordion,
   AccordionContent,
@@ -22,8 +23,8 @@ interface BlockPanelProps {
   onCopyCode: () => void;
   onSaveFile: () => void;
   isCodeCopied: boolean;
-  isCodeVisualizerVisible: boolean;
-  toggleCodeVisualizer: () => void;
+  // isCodeVisualizerVisible: boolean; // Removed
+  // toggleCodeVisualizer: () => void; // Removed
 }
 
 export function BlockPanel({
@@ -31,8 +32,8 @@ export function BlockPanel({
   onCopyCode,
   onSaveFile,
   isCodeCopied,
-  isCodeVisualizerVisible,
-  toggleCodeVisualizer,
+  // isCodeVisualizerVisible, // Removed
+  // toggleCodeVisualizer, // Removed
 }: BlockPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -55,14 +56,17 @@ export function BlockPanel({
 
   const initialOrFilteredOpenCategories = useMemo(() => {
     if (!searchTerm.trim()) {
+      // Default to all categories defined in AVAILABLE_BLOCKS, not just filtered ones.
       return Array.from(new Set(availableBlocks.map(block => block.category)));
     }
-    return categories;
+    return categories; // If searching, open categories with matches.
   }, [categories, searchTerm, availableBlocks]);
 
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(initialOrFilteredOpenCategories);
 
   useEffect(() => {
+    // This effect ensures that if the search term changes, the accordion reflects
+    // the new set of categories that should be open.
     setOpenAccordionItems(initialOrFilteredOpenCategories);
   }, [initialOrFilteredOpenCategories]);
 
@@ -72,6 +76,7 @@ export function BlockPanel({
       <header className="p-4 border-b space-y-3">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold text-foreground">Blocks</h2>
+          {/* Removed Toggle Button
           <Button
             variant="ghost"
             size="icon"
@@ -82,6 +87,7 @@ export function BlockPanel({
           >
             {isCodeVisualizerVisible ? <PanelRightClose /> : <PanelRightOpen />}
           </Button>
+          */}
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button onClick={onCopyCode} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">
