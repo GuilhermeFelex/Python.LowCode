@@ -39,7 +39,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Read File',
     description: 'Reads content from a specified file.',
     icon: FileText,
-    category: 'File I/O', // Changed from 'File IO'
+    category: 'File I/O',
     parameters: [
       { id: 'filePath', name: 'File Path', type: 'string', defaultValue: './my_file.txt', placeholder: 'e.g., /path/to/file.txt or variable' },
       { id: 'variableName', name: 'Store in Variable', type: 'string', defaultValue: 'file_content', placeholder: 'Variable name' },
@@ -255,7 +255,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Move Mouse',
     description: 'Moves the mouse cursor to the specified X and Y coordinates.',
     icon: MousePointerSquareDashed,
-    category: 'Automation UI (PyAutoGUI)',
+    category: 'PyAutoGUI',
     parameters: [
       { id: 'x_coord', name: 'X Coordinate', type: 'number', defaultValue: '100', placeholder: 'e.g., 100 or var_x' },
       { id: 'y_coord', name: 'Y Coordinate', type: 'number', defaultValue: '100', placeholder: 'e.g., 100 or var_y' },
@@ -268,7 +268,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Click Mouse',
     description: 'Performs a mouse click at the current or specified coordinates.',
     icon: MousePointerSquareDashed,
-    category: 'Automation UI (PyAutoGUI)',
+    category: 'PyAutoGUI',
     parameters: [
       { id: 'x_coord', name: 'X Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_x (blank for current)' },
       { id: 'y_coord', name: 'Y Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_y (blank for current)' },
@@ -289,7 +289,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Type Text',
     description: 'Types the given string of characters.',
     icon: ScanText, 
-    category: 'Automation UI (PyAutoGUI)',
+    category: 'PyAutoGUI',
     parameters: [
       { id: 'text_to_type', name: 'Text to Type', type: 'string', defaultValue: 'Hello!', placeholder: 'Enter text or variable name' },
       { id: 'interval', name: 'Interval (sec, per char)', type: 'number', defaultValue: '0.1', placeholder: 'e.g., 0.05 or var_interval' },
@@ -301,7 +301,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Take Screenshot',
     description: 'Takes a screenshot and saves it to a file, or stores it in a variable.',
     icon: Puzzle, 
-    category: 'Automation UI (PyAutoGUI)',
+    category: 'PyAutoGUI',
     parameters: [
       { id: 'filename', name: 'Filename (optional)', type: 'string', defaultValue: 'screenshot.png', placeholder: 'e.g., my_screenshot.png or var (blank to not save)' },
       { id: 'variableName', name: 'Store Image In (optional)', type: 'string', defaultValue: '', placeholder: 'Variable name for image object' },
@@ -331,7 +331,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Read CSV (Pandas)',
     description: 'Reads a CSV file into a Pandas DataFrame.',
     icon: FileDown,
-    category: 'Data Manipulation (Pandas)',
+    category: 'Pandas',
     parameters: [
       { id: 'filePath', name: 'File Path', type: 'string', defaultValue: 'data.csv', placeholder: 'e.g., /path/to/data.csv or var' },
       { id: 'variableName', name: 'Store DataFrame In', type: 'string', defaultValue: 'df', placeholder: 'Variable name for DataFrame' },
@@ -343,7 +343,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'DataFrame to CSV (Pandas)',
     description: 'Writes a Pandas DataFrame to a CSV file.',
     icon: FileUp,
-    category: 'Data Manipulation (Pandas)',
+    category: 'Pandas',
     parameters: [
       { id: 'dataFrameVariable', name: 'DataFrame Variable', type: 'string', defaultValue: 'df', placeholder: 'Name of DataFrame variable' },
       { id: 'filePath', name: 'Output File Path', type: 'string', defaultValue: 'output.csv', placeholder: 'e.g., /path/to/output.csv or var' },
@@ -359,7 +359,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Show DataFrame Head (Pandas)',
     description: 'Prints the first n rows of a DataFrame.',
     icon: Database,
-    category: 'Data Manipulation (Pandas)',
+    category: 'Pandas',
     parameters: [
       { id: 'dataFrameVariable', name: 'DataFrame Variable', type: 'string', defaultValue: 'df', placeholder: 'Name of DataFrame variable' },
       { id: 'numRows', name: 'Number of Rows', type: 'number', defaultValue: '5', placeholder: 'e.g., 5 or var_rows' },
