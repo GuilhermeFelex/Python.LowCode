@@ -267,7 +267,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     id: 'pyautogui_click',
     name: 'Click Mouse',
     description: 'Performs a mouse click at the current or specified coordinates.',
-    icon: MousePointerSquareDashed,
+    icon: MousePointerClick,
     category: 'PyAutoGUI',
     parameters: [
       { id: 'x_coord', name: 'X Coordinate (optional)', type: 'string', defaultValue: '', placeholder: 'e.g., 100 or var_x (blank for current)' },
@@ -372,7 +372,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Initialize WebDriver (Selenium)',
     description: 'Initializes a Selenium WebDriver instance for a chosen browser.',
     icon: Power,
-    category: 'Web Automation (Selenium)',
+    category: 'Selenium',
     parameters: [
       { 
         id: 'browser', 
@@ -437,7 +437,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Open URL (Selenium)',
     description: 'Navigates the browser to the specified URL.',
     icon: Globe,
-    category: 'Web Automation (Selenium)',
+    category: 'Selenium',
     parameters: [
       { id: 'driverVariable', name: 'WebDriver Instance', type: 'string', defaultValue: 'driver', placeholder: 'Variable holding WebDriver' },
       { id: 'url', name: 'URL to Open', type: 'string', defaultValue: 'https://www.example.com', placeholder: 'https://...' },
@@ -449,7 +449,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Find Element (Selenium)',
     description: 'Finds a web element by a specified selector strategy.',
     icon: LocateFixed,
-    category: 'Web Automation (Selenium)',
+    category: 'Selenium',
     parameters: [
       { id: 'driverVariable', name: 'WebDriver Instance', type: 'string', defaultValue: 'driver', placeholder: 'Variable holding WebDriver' },
       { 
@@ -493,7 +493,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Click Element (Selenium)',
     description: 'Clicks a previously found web element.',
     icon: MousePointerClick,
-    category: 'Web Automation (Selenium)',
+    category: 'Selenium',
     parameters: [
       { id: 'elementVariable', name: 'Element to Click', type: 'string', defaultValue: 'web_element', placeholder: 'Variable holding the element' },
     ],
@@ -504,7 +504,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Send Keys to Element (Selenium)',
     description: 'Sends keystrokes to a web element (e.g., typing in an input field).',
     icon: Type,
-    category: 'Web Automation (Selenium)',
+    category: 'Selenium',
     parameters: [
       { id: 'elementVariable', name: 'Element to Type In', type: 'string', defaultValue: 'web_element', placeholder: 'Variable holding the element' },
       { id: 'textToSend', name: 'Text to Send', type: 'string', defaultValue: 'Hello, Selenium!', placeholder: 'Enter text or variable name' },
@@ -516,7 +516,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Get Text from Element (Selenium)',
     description: 'Retrieves the text content of a web element.',
     icon: Baseline,
-    category: 'Web Automation (Selenium)',
+    category: 'Selenium',
     parameters: [
       { id: 'elementVariable', name: 'Element to Get Text From', type: 'string', defaultValue: 'web_element', placeholder: 'Variable holding the element' },
       { id: 'textVariable', name: 'Store Text In', type: 'string', defaultValue: 'element_text', placeholder: 'Variable name for the extracted text' },
@@ -528,7 +528,7 @@ export const AVAILABLE_BLOCKS: Block[] = [
     name: 'Close WebDriver (Selenium)',
     description: 'Closes the browser and terminates the WebDriver session.',
     icon: Power,
-    category: 'Web Automation (Selenium)',
+    category: 'Selenium',
     parameters: [
       { id: 'driverVariable', name: 'WebDriver Instance', type: 'string', defaultValue: 'driver', placeholder: 'Variable holding WebDriver' },
     ],
