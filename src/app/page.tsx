@@ -9,7 +9,7 @@ import { CodeVisualizer } from '@/components/visual-script/CodeVisualizer';
 import type { CanvasBlock } from '@/types/visual-script';
 import { AVAILABLE_BLOCKS, generatePythonCode } from '@/lib/visual-script-utils';
 import { useToast } from "@/hooks/use-toast";
-import { PanelRightOpen, PanelRightClose } from 'lucide-react';
+// import { PanelRightOpen, PanelRightClose } from 'lucide-react'; // No longer needed directly here
 import { Button } from '@/components/ui/button';
 
 export default function VisualScriptPage() {
@@ -22,8 +22,6 @@ export default function VisualScriptPage() {
   const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384); // Default width for CodeVisualizer
   const minVisualizerWidth = 200; // Minimum width for CodeVisualizer
   const maxVisualizerWidth = 800; // Maximum width for CodeVisualizer
-  // const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true); // State to control visibility
-
 
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
@@ -40,27 +38,25 @@ export default function VisualScriptPage() {
     }
   }, [canvasBlocks, isClient]);
 
-  // Helper function to find and remove a block recursively
   const findAndRemoveBlockRecursive = useCallback((blocks: CanvasBlock[], idToRemove: string): { updatedBlocks: CanvasBlock[], removedBlock: CanvasBlock | null } => {
     let removedBlock: CanvasBlock | null = null;
     const updatedBlocks = blocks.filter(block => {
       if (block.instanceId === idToRemove) {
         removedBlock = block;
-        return false; // Remove this block
+        return false; 
       }
-      if (block.children && !removedBlock) { // If not found yet and block has children
+      if (block.children && !removedBlock) { 
         const result = findAndRemoveBlockRecursive(block.children, idToRemove);
         if (result.removedBlock) {
           removedBlock = result.removedBlock;
-          block.children = result.updatedBlocks; // Update children of this block
+          block.children = result.updatedBlocks; 
         }
       }
-      return true; // Keep this block
+      return true; 
     });
     return { updatedBlocks, removedBlock };
   }, []);
   
-  // Helper function to insert a block into a parent's children list
   const insertIntoChildrenRecursive = useCallback((blocks: CanvasBlock[], parentId: string, blockToInsert: CanvasBlock): CanvasBlock[] => {
     return blocks.map(block => {
       if (block.instanceId === parentId) {
@@ -69,7 +65,7 @@ export default function VisualScriptPage() {
           return {
             ...block,
             children: [...(block.children || []), blockToInsert],
-            isCollapsed: false, // Ensure parent is expanded
+            isCollapsed: false, 
           };
         }
       }
@@ -80,7 +76,6 @@ export default function VisualScriptPage() {
     });
   }, []);
 
-  // Helper function to insert a block before a target block in the same list
   const insertBeforeRecursive = useCallback((blocks: CanvasBlock[], targetId: string, blockToInsert: CanvasBlock): { newBlocks: CanvasBlock[], inserted: boolean } => {
     let inserted = false;
     const newBlocks: CanvasBlock[] = [];
@@ -89,18 +84,16 @@ export default function VisualScriptPage() {
         newBlocks.push(blockToInsert);
         inserted = true;
       }
-      if (block.children && !inserted) { // Check children of current block only if not inserted at current level
+      if (block.children && !inserted) { 
         const childResult = insertBeforeRecursive(block.children, targetId, blockToInsert);
         if (childResult.inserted) {
           newBlocks.push({ ...block, children: childResult.newBlocks });
           inserted = true; 
-          // If inserted in children, we still need to push the original block (now with modified children)
-          // The 'continue' here was causing issues, the block itself needs to be added.
         } else {
-          newBlocks.push(block); // Push original block if not inserted in its children
+          newBlocks.push(block); 
         }
       } else {
-         newBlocks.push(block); // Push block if it has no children or already inserted
+         newBlocks.push(block); 
       }
     }
     return { newBlocks, inserted };
@@ -126,7 +119,7 @@ export default function VisualScriptPage() {
     }
 
     setCanvasBlocks(prevBlocks => {
-      if (newBlockTypeId) { // Dragging a new block from the palette
+      if (newBlockTypeId) { 
         const blockType = AVAILABLE_BLOCKS.find(b => b.id === newBlockTypeId);
         if (!blockType) return prevBlocks;
 
@@ -152,24 +145,20 @@ export default function VisualScriptPage() {
           return [...prevBlocks, newBlock];
         }
 
-      } else if (draggedInstanceId) { // Reordering an existing block from the canvas
+      } else if (draggedInstanceId) { 
         if (draggedInstanceId === parentDropZoneInstanceId || draggedInstanceId === directDropOnBlockInstanceId) {
-          // Prevent dropping a block onto itself or its own direct drop zone (which would be an infinite loop or no-op)
           return prevBlocks; 
         }
 
         const { updatedBlocks: blocksAfterRemoval, removedBlock } = findAndRemoveBlockRecursive(prevBlocks, draggedInstanceId);
-        if (!removedBlock) return prevBlocks; // Block to drag not found, should not happen if drag started correctly
+        if (!removedBlock) return prevBlocks; 
 
         if (parentDropZoneInstanceId) {
-          // Dropping into a child zone of another block
           return insertIntoChildrenRecursive(blocksAfterRemoval, parentDropZoneInstanceId, removedBlock);
         } else if (directDropOnBlockInstanceId) {
-          // Dropping onto another block (to insert before it)
            const result = insertBeforeRecursive(blocksAfterRemoval, directDropOnBlockInstanceId, removedBlock);
-           return result.inserted ? result.newBlocks : [...blocksAfterRemoval, removedBlock]; // Fallback to end if insertBefore fails
+           return result.inserted ? result.newBlocks : [...blocksAfterRemoval, removedBlock]; 
         } else { 
-          // Dropping onto the main canvas (root level)
           return [...blocksAfterRemoval, removedBlock];
         }
       }
@@ -310,10 +299,6 @@ export default function VisualScriptPage() {
     };
   }, [isClient, minVisualizerWidth, maxVisualizerWidth]);
 
-  // const toggleCodeVisualizer = useCallback(() => {
-  //   setIsCodeVisualizerVisible(prev => !prev);
-  // }, []);
-
 
   if (!isClient) {
     return null;
@@ -326,8 +311,6 @@ export default function VisualScriptPage() {
         onCopyCode={handleCopyCode}
         onSaveFile={handleSaveToFile}
         isCodeCopied={copied}
-        // isCodeVisualizerVisible={isCodeVisualizerVisible}
-        // toggleCodeVisualizer={toggleCodeVisualizer}
       />
       <MainCanvas
         canvasBlocks={canvasBlocks}
@@ -336,8 +319,6 @@ export default function VisualScriptPage() {
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
-        // isCodeVisualizerVisible={isCodeVisualizerVisible} 
-        // toggleCodeVisualizer={toggleCodeVisualizer}
       />
       <>
         <div
