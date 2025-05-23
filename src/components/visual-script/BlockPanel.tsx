@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Play, Copy, Check, Download, Search } from 'lucide-react';
+import { Copy, Check, Download, Search, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -19,18 +19,20 @@ import {
 
 interface BlockPanelProps {
   availableBlocks: Block[];
-  onSimulate: () => void;
   onCopyCode: () => void;
   onSaveFile: () => void;
   isCodeCopied: boolean;
+  isCodeVisualizerVisible: boolean;
+  toggleCodeVisualizer: () => void;
 }
 
 export function BlockPanel({
   availableBlocks,
-  onSimulate,
   onCopyCode,
   onSaveFile,
   isCodeCopied,
+  isCodeVisualizerVisible,
+  toggleCodeVisualizer,
 }: BlockPanelProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -51,20 +53,15 @@ export function BlockPanel({
     return Array.from(new Set(filteredBlocks.map(block => block.category))).sort();
   }, [filteredBlocks]);
 
-  // Determine which categories should be open based on search or default
   const initialOrFilteredOpenCategories = useMemo(() => {
     if (!searchTerm.trim()) {
-      // Default to all categories from the original availableBlocks list if no search term
       return Array.from(new Set(availableBlocks.map(block => block.category)));
     }
-    // If there is a search term, only include categories that have matching blocks
     return categories;
   }, [categories, searchTerm, availableBlocks]);
 
-  // State to manage accordion open items
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(initialOrFilteredOpenCategories);
 
-  // Effect to update open items when the search term changes or initial categories are determined
   useEffect(() => {
     setOpenAccordionItems(initialOrFilteredOpenCategories);
   }, [initialOrFilteredOpenCategories]);
@@ -75,18 +72,24 @@ export function BlockPanel({
       <header className="p-4 border-b space-y-3">
         <div className="flex justify-between items-center">
           <h2 className="text-lg font-semibold text-foreground">Blocks</h2>
-          {/* Toggle button removed from here */}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <Button onClick={onSimulate} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">
-            <Play className="mr-1 h-3 w-3" /> Simulate
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCodeVisualizer}
+            className="h-7 w-7"
+            aria-label={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
+            title={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
+          >
+            {isCodeVisualizerVisible ? <PanelRightClose /> : <PanelRightOpen />}
           </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
           <Button onClick={onCopyCode} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">
             {isCodeCopied ? <Check className="mr-1 h-3 w-3 text-green-500" /> : <Copy className="mr-1 h-3 w-3" />}
             {isCodeCopied ? 'Copied' : 'Copy'}
           </Button>
           <Button onClick={onSaveFile} variant="outline" size="sm" className="text-xs px-2 py-1 h-auto">
-            <Download className="mr-1 h-3 w-3" /> Save
+            <Download className="h-3 w-3" /> Save File
           </Button>
         </div>
         <div className="relative">
@@ -104,15 +107,15 @@ export function BlockPanel({
         {filteredBlocks.length === 0 && searchTerm.trim() && (
           <p className="p-4 text-sm text-muted-foreground text-center">No blocks found matching "{searchTerm}".</p>
         )}
-        <Accordion 
-          type="multiple" 
-          value={openAccordionItems} // Controlled component
-          onValueChange={setOpenAccordionItems} // Handler to update state
+        <Accordion
+          type="multiple"
+          value={openAccordionItems}
+          onValueChange={setOpenAccordionItems}
           className="w-full p-4"
         >
           {categories.map(category => {
             const blocksInCategory = filteredBlocks.filter(b => b.category === category);
-            if (blocksInCategory.length === 0) return null; // Don't render category if no blocks match search
+            if (blocksInCategory.length === 0) return null;
 
             return (
               <AccordionItem value={category} key={category} className="border-b-0 mb-2 last:mb-0">
