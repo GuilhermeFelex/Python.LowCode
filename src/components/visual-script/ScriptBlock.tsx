@@ -39,9 +39,6 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   onBlockDrop,
 }) => {
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
-    // event.stopPropagation(); // My comment: Re-evaluating if stopPropagation is always needed here. 
-                              // It might prevent MainCanvas from handling root drops.
-                              // For now, let's keep it to ensure specific drop zones on blocks are prioritized.
     if (isPaletteBlock) {
       event.dataTransfer.setData('blockTypeId', blockDefinition.id);
     } else if (canvasBlockInstance) {
@@ -51,8 +48,8 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault(); // Necessary to allow dropping
-    event.stopPropagation(); // Prevent parent handlers if this is a valid drop target
+    event.preventDefault(); 
+    event.stopPropagation(); 
     if (event.dataTransfer.types.includes('blocktypeid') || event.dataTransfer.types.includes('draggedcanvasblockid')) {
       event.dataTransfer.dropEffect = 'move';
     } else {
@@ -62,7 +59,7 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation(); // This block or its child zone is handling the drop.
+    event.stopPropagation(); 
     if (onBlockDrop) {
       onBlockDrop(event);
     }
@@ -155,6 +152,30 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   const isDroppableChildArea = !isPaletteBlock && blockDefinition.canHaveChildren && canvasBlockInstance;
   const isCollapsed = canvasBlockInstance?.isCollapsed ?? false;
 
+  const renderHeaderIcon = () => {
+    if (isPaletteBlock) {
+      return <GripVertical className="h-4 w-4 text-muted-foreground" />;
+    }
+    // Canvas Block
+    if (onToggleCollapse && canvasBlockInstance) {
+      return (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onToggleCollapse(canvasBlockInstance.instanceId)}
+          className="h-6 w-6 p-0 mr-1"
+          aria-label={isCollapsed ? `Expand ${blockDefinition.name} block` : `Collapse ${blockDefinition.name} block`}
+        >
+          {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+        </Button>
+      );
+    }
+    if (blockDefinition.canHaveChildren) {
+      return <CornerDownRight className="h-4 w-4 text-muted-foreground" />;
+    }
+    return <GripVertical className="h-4 w-4 text-muted-foreground" />;
+  };
+
   return (
     <Card
       draggable={true} 
@@ -167,23 +188,7 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
     >
       <CardHeader className="flex flex-row items-center justify-between p-3 bg-muted/50 rounded-t-lg">
         <div className="flex items-center gap-2 flex-grow">
-          {!isPaletteBlock && onToggleCollapse && canvasBlockInstance && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onToggleCollapse(canvasBlockInstance.instanceId)}
-              className="h-6 w-6 p-0 mr-1"
-              aria-label={isCollapsed ? `Expand ${blockDefinition.name} block` : `Collapse ${blockDefinition.name} block`}
-            >
-              {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-            </Button>
-          )}
-          {(isPaletteBlock || (!isPaletteBlock && !onToggleCollapse && !blockDefinition.canHaveChildren )) &&
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          }
-           {(!isPaletteBlock && blockDefinition.canHaveChildren && !onToggleCollapse && !canvasBlockInstance?.children?.length) &&
-            <CornerDownRight className="h-4 w-4 text-muted-foreground" />
-          }
+          {renderHeaderIcon()}
           <blockDefinition.icon className="h-5 w-5 text-primary" />
           <CardTitle className="text-sm font-semibold">{blockDefinition.name}</CardTitle>
         </div>
@@ -255,3 +260,4 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
 }
 
 export const ScriptBlock = React.memo(ScriptBlockComponent);
+

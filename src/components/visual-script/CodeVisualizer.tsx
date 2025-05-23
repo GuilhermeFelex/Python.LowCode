@@ -51,7 +51,7 @@ export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
       </CardHeader>
       <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
         <ScrollArea className="flex-1">
-          <pre className={`p-4 text-sm whitespace-pre-wrap break-all transition-opacity duration-150 ${isFading ? 'opacity-50' : 'opacity-100'}`}>
+          <pre className={`p-4 text-sm whitespace-pre-wrap break-words transition-opacity duration-150 ${isFading ? 'opacity-50' : 'opacity-100'}`}>
             <code>
               {formattedCodeLines.map((line, index) => (
                 <div key={index}>{line}</div>
@@ -63,3 +63,4 @@ export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
     </aside>
   );
 }
+
