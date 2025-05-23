@@ -2,7 +2,7 @@
 // src/app/page.tsx
 "use client";
 
-import { useState, useEffect, type DragEvent, useCallback, useRef } from 'react';
+import React, { useState, useEffect, type DragEvent, useCallback, useRef } from 'react';
 import { BlockPanel } from '@/components/visual-script/BlockPanel';
 import { MainCanvas } from '@/components/visual-script/MainCanvas';
 import { CodeVisualizer } from '@/components/visual-script/CodeVisualizer';
@@ -20,7 +20,6 @@ export default function VisualScriptPage() {
   const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384);
   const minVisualizerWidth = 200;
   const maxVisualizerWidth = 800;
-  // const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true); // Removed
 
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
@@ -37,11 +36,7 @@ export default function VisualScriptPage() {
     }
   }, [canvasBlocks, isClient]);
 
-  // const toggleCodeVisualizer = () => { // Removed
-  //   setIsCodeVisualizerVisible(prev => !prev);
-  // };
-
-  const handleBlockDrop = (event: DragEvent<HTMLDivElement>) => {
+  const handleBlockDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const blockTypeId = event.dataTransfer.getData('blockTypeId');
     if (!blockTypeId || !isClient) return;
@@ -66,8 +61,8 @@ export default function VisualScriptPage() {
     const dropZone = target.closest<HTMLElement>('[data-is-drop-zone="true"]');
     const parentInstanceId = dropZone?.dataset.instanceId;
 
-    if (parentInstanceId) {
-      setCanvasBlocks(prevBlocks => {
+    setCanvasBlocks(prevBlocks => {
+      if (parentInstanceId) {
         const addRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
           return blocks.map(block => {
             if (block.instanceId === parentInstanceId) {
@@ -76,7 +71,7 @@ export default function VisualScriptPage() {
                 return {
                   ...block,
                   children: [...(block.children || []), newBlock],
-                  isCollapsed: false, // Ensure parent expands if a child is added
+                  isCollapsed: false,
                 };
               }
             }
@@ -86,31 +81,22 @@ export default function VisualScriptPage() {
             return block;
           });
         };
-
-        // My check to see if the block was actually added to a child or needs to go to root
+        
         const originalBlocksJson = JSON.stringify(prevBlocks);
         const updatedBlocks = addRecursive(prevBlocks);
 
-        if (JSON.stringify(updatedBlocks) === originalBlocksJson) {
-           // If not added to a child, and not explicitly dropped on a valid zone (e.g. canvas itself was target but not the dropzone div)
-           // it implies it should go to the root. This logic handles direct drop on canvas without a specific zone.
-           if (!dropZone) { // Corrected condition: if no dropZone, add to root
-             return [...prevBlocks, newBlock];
-          }
-          // If a dropZone was identified but the block wasn't added, it might be an invalid drop target (e.g., non-nestable block)
-          // In this case, the logic should have prevented the drop or it implies the block should still go to the root if not handled.
-          // However, the current logic would have already placed it if parentInstanceId was valid.
-          // If dropZone is present, it means it was dropped on a child zone.
-          return updatedBlocks;
+        if (JSON.stringify(updatedBlocks) === originalBlocksJson && !dropZone) {
+           return [...prevBlocks, newBlock];
         }
         return updatedBlocks;
-      });
-    } else {
-      setCanvasBlocks(prevBlocks => [...prevBlocks, newBlock]);
-    }
-  };
 
-  const handleParamChange = (instanceId: string, paramId: string, value: string) => {
+      } else {
+        return [...prevBlocks, newBlock];
+      }
+    });
+  }, [isClient]);
+
+  const handleParamChange = useCallback((instanceId: string, paramId: string, value: string) => {
     const updateRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
       return blocks.map(block => {
         if (block.instanceId === instanceId) {
@@ -123,9 +109,9 @@ export default function VisualScriptPage() {
       });
     };
     setCanvasBlocks(prev => updateRecursive(prev));
-  };
+  }, []);
 
-  const handleRemoveBlock = (instanceId: string) => {
+  const handleRemoveBlock = useCallback((instanceId: string) => {
     const removeRecursive = (blocks: CanvasBlock[]): { updatedBlocks: CanvasBlock[], blockFound: boolean } => {
       let blockFound = false;
       const updatedBlocks = blocks.filter(block => {
@@ -143,9 +129,9 @@ export default function VisualScriptPage() {
       return { updatedBlocks, blockFound };
     };
     setCanvasBlocks(prev => removeRecursive(prev).updatedBlocks);
-  };
+  }, []);
 
-  const handleToggleBlockCollapse = (instanceId: string) => {
+  const handleToggleBlockCollapse = useCallback((instanceId: string) => {
     const toggleRecursive = (blocks: CanvasBlock[]): CanvasBlock[] => {
       return blocks.map(block => {
         if (block.instanceId === instanceId) {
@@ -158,9 +144,9 @@ export default function VisualScriptPage() {
       });
     };
     setCanvasBlocks(prev => toggleRecursive(prev));
-  };
+  }, []);
 
-  const handleCopyCode = async () => {
+  const handleCopyCode = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(generatedCode);
       setCopied(true);
@@ -177,9 +163,9 @@ export default function VisualScriptPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [generatedCode, toast]);
 
-  const handleSaveToFile = () => {
+  const handleSaveToFile = useCallback(() => {
     try {
       const blob = new Blob([generatedCode], { type: 'text/python' });
       const url = URL.createObjectURL(blob);
@@ -202,7 +188,7 @@ export default function VisualScriptPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [generatedCode, toast]);
 
   const handleMouseDownOnResizer = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if (!isClient) return;
@@ -221,7 +207,7 @@ export default function VisualScriptPage() {
     const handleMouseMove = (event: MouseEvent) => {
         if (!isResizing.current) return;
         const dx = event.clientX - dragStartX.current;
-        let newWidth = dragStartWidth.current - dx; // My fix for the resize direction.
+        let newWidth = dragStartWidth.current - dx; 
         newWidth = Math.max(minVisualizerWidth, Math.min(newWidth, maxVisualizerWidth));
         setCodeVisualizerWidth(newWidth);
     };
@@ -256,8 +242,6 @@ export default function VisualScriptPage() {
         onCopyCode={handleCopyCode}
         onSaveFile={handleSaveToFile}
         isCodeCopied={copied}
-        // isCodeVisualizerVisible={isCodeVisualizerVisible} // Removed
-        // toggleCodeVisualizer={toggleCodeVisualizer} // Removed
       />
       <MainCanvas
         canvasBlocks={canvasBlocks}
@@ -266,23 +250,19 @@ export default function VisualScriptPage() {
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
-        // isCodeVisualizerVisible={isCodeVisualizerVisible} // Removed
-        // toggleCodeVisualizer={toggleCodeVisualizer} // Removed
       />
-      {/* {isCodeVisualizerVisible && ( // Removed conditional rendering */}
-        <>
-          <div
-            className="w-1 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
-            onMouseDown={handleMouseDownOnResizer}
-            role="separator"
-            aria-label="Resize code visualizer panel"
-            title="Resize panel"
-          >
-            <div className="w-0.5 h-8 bg-transparent group-hover:bg-primary/30 rounded-full transition-colors duration-150"></div>
-          </div>
-          <CodeVisualizer code={generatedCode} width={codeVisualizerWidth} />
-        </>
-      {/* )} // Removed conditional rendering */}
+      <>
+        <div
+          className="w-1 cursor-col-resize bg-border hover:bg-primary/10 transition-colors flex items-center justify-center group"
+          onMouseDown={handleMouseDownOnResizer}
+          role="separator"
+          aria-label="Resize code visualizer panel"
+          title="Resize panel"
+        >
+          <div className="w-0.5 h-8 bg-transparent group-hover:bg-primary/30 rounded-full transition-colors duration-150"></div>
+        </div>
+        <CodeVisualizer code={generatedCode} width={codeVisualizerWidth} />
+      </>
     </div>
   );
 }

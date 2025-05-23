@@ -2,8 +2,7 @@
 // src/components/visual-script/ScriptBlock.tsx
 "use client";
 
-import type React from 'react';
-import type { DragEvent } from 'react';
+import React, { type DragEvent } from 'react'; // Added React import for React.memo
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,11 +26,10 @@ interface ScriptBlockProps {
   onParamChange?: (instanceId: string, paramId: string, value: string) => void;
   onRemove?: (instanceId: string) => void;
   onToggleCollapse?: (instanceId: string) => void;
-  onBlockDrop?: (event: DragEvent<HTMLDivElement>) => void; // Reverted signature
-  // parentId prop removed
+  onBlockDrop?: (event: DragEvent<HTMLDivElement>) => void;
 }
 
-export function ScriptBlock({
+const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   blockDefinition,
   canvasBlockInstance,
   isPaletteBlock,
@@ -39,21 +37,19 @@ export function ScriptBlock({
   onRemove,
   onToggleCollapse,
   onBlockDrop,
-}: ScriptBlockProps) {
+}) => {
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
     if (isPaletteBlock) {
-      event.dataTransfer.setData('blockTypeId', blockDefinition.id); // Use 'blockTypeId' for new blocks
+      event.dataTransfer.setData('blockTypeId', blockDefinition.id);
       event.dataTransfer.effectAllowed = 'move';
     } else {
-      // Blocks on the canvas are not draggable for reordering in this reverted state
       event.preventDefault();
     }
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation(); // Allow dropping into child zones
-    // Only allow dropping if a new block is being dragged from the palette
+    event.stopPropagation();
     if (event.dataTransfer.types.includes('blocktypeid')) {
         event.dataTransfer.dropEffect = 'move';
     } else {
@@ -61,14 +57,12 @@ export function ScriptBlock({
     }
   };
 
-  // This handler is for dropping new blocks (from palette) into a child area
   const handleDropInChildrenArea = (event: DragEvent<HTMLDivElement>) => {
     if (isPaletteBlock || !canvasBlockInstance || !blockDefinition.canHaveChildren || !onBlockDrop) return;
-    // Ensure the drop is directly on the drop zone, not a child block within it.
     if (event.target === event.currentTarget) {
         event.preventDefault();
-        event.stopPropagation(); // Prevent event from bubbling to parent canvas/block
-        onBlockDrop(event); // Call the main drop handler from page.tsx
+        event.stopPropagation();
+        onBlockDrop(event);
     }
   };
 
@@ -161,12 +155,11 @@ export function ScriptBlock({
 
   return (
     <Card
-      draggable={isPaletteBlock} // Only palette blocks are draggable
+      draggable={isPaletteBlock}
       onDragStart={handleDragStart}
-      // No onDragOver or onDrop for the Card itself related to reordering
       className={cardClasses}
       aria-label={`${blockDefinition.name} block`}
-      data-instance-id={canvasBlockInstance?.instanceId} // Used by parent drop logic to identify this block
+      data-instance-id={canvasBlockInstance?.instanceId}
     >
       <CardHeader className="flex flex-row items-center justify-between p-3 bg-muted/50 rounded-t-lg">
         <div className="flex items-center gap-2 flex-grow">
@@ -223,13 +216,14 @@ export function ScriptBlock({
                 data-instance-id={canvasBlockInstance.instanceId}
                 data-is-drop-zone="true"
                 className="m-2 p-3 border border-dashed border-accent/50 rounded-md min-h-[60px] bg-background/30 space-y-2"
-                onDragOver={handleDragOver} 
-                onDrop={handleDropInChildrenArea} // For dropping new blocks into this child area
+                onDragOver={handleDragOver}
+                onDrop={handleDropInChildrenArea}
               >
                 {canvasBlockInstance.children && canvasBlockInstance.children.length > 0 ? (
                   canvasBlockInstance.children.map(childBlock => {
                     const childBlockDef = AVAILABLE_BLOCKS.find(b => b.id === childBlock.blockTypeId);
                     if (!childBlockDef) return null;
+                    // Ensure correct props are passed for nested ScriptBlocks
                     return (
                       <ScriptBlock
                         key={childBlock.instanceId}
@@ -239,7 +233,7 @@ export function ScriptBlock({
                         onParamChange={onParamChange}
                         onRemove={onRemove}
                         onToggleCollapse={onToggleCollapse}
-                        onBlockDrop={onBlockDrop} // Pass down main drop handler for nested drops
+                        onBlockDrop={onBlockDrop}
                       />
                     );
                   })
@@ -256,3 +250,5 @@ export function ScriptBlock({
     </Card>
   );
 }
+
+export const ScriptBlock = React.memo(ScriptBlockComponent);
