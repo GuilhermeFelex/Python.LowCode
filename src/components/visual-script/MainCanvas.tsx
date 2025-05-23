@@ -7,7 +7,8 @@ import type { DragEvent } from 'react';
 import type { CanvasBlock, Block } from '@/types/visual-script';
 import { ScriptBlock } from './ScriptBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { SquareDashedMousePointer } from 'lucide-react';
+import { SquareDashedMousePointer, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 
 interface MainCanvasProps {
@@ -17,6 +18,9 @@ interface MainCanvasProps {
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
   onToggleBlockCollapse: (instanceId: string) => void;
+  // Props for code visualizer toggle - removed as per user request
+  // isCodeVisualizerVisible: boolean;
+  // toggleCodeVisualizer: () => void;
 }
 
 export function MainCanvas({
@@ -26,26 +30,32 @@ export function MainCanvas({
   onParamChange,
   onRemoveBlock,
   onToggleBlockCollapse,
+  // isCodeVisualizerVisible, // removed
+  // toggleCodeVisualizer, // removed
 }: MainCanvasProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    if (event.dataTransfer.types.includes('blocktypeid') || event.dataTransfer.types.includes('draggedcanvasblockid')) {
-        event.dataTransfer.dropEffect = 'move';
+    // Check if the item being dragged is one of ours
+    const isDraggableBlock = event.dataTransfer.types.some(
+      (type) => type.toLowerCase() === 'blocktypeid' || type.toLowerCase() === 'draggedcanvasblockid'
+    );
+    if (isDraggableBlock) {
+      event.preventDefault(); // This is crucial for onDrop to fire
+      event.dataTransfer.dropEffect = 'move';
     } else {
-        event.dataTransfer.dropEffect = 'none';
+      event.dataTransfer.dropEffect = 'none';
     }
   };
 
   const handleDropOnCanvas = (event: DragEvent<HTMLDivElement>) => {
-    // Only call onBlockDrop if the drop event originated directly on the ScrollArea's immediate child div,
-    // or if it's a valid drag type. This prevents issues when dropping on child blocks.
-    const directTarget = event.target === event.currentTarget.firstChild; // Check if drop is on the direct "p-6 space-y-4" div
-    const isBlockBeingDragged = event.dataTransfer.types.includes('blocktypeid') || event.dataTransfer.types.includes('draggedcanvasblockid');
-
-    if (isBlockBeingDragged && directTarget) {
-        onBlockDrop(event);
-    } else if (isBlockBeingDragged && event.target === event.currentTarget) { // Dropped on ScrollArea itself
-        onBlockDrop(event);
+    const isDraggableBlock = event.dataTransfer.types.some(
+      (type) => type.toLowerCase() === 'blocktypeid' || type.toLowerCase() === 'draggedcanvasblockid'
+    );
+    if (isDraggableBlock) {
+      event.preventDefault(); // Prevent default action (like opening as link)
+      // Let page.tsx handle the logic and stop propagation if it handles the event.
+      // ScriptBlock's onDrop will also call onBlockDrop but will have stopped propagation.
+      // This handler is primarily for drops on the "empty" parts of the canvas.
+      onBlockDrop(event);
     }
   };
 
@@ -56,6 +66,18 @@ export function MainCanvas({
           <h1 className="text-2xl font-bold text-primary">Visual Script Canvas</h1>
           <p className="text-sm text-muted-foreground">Construct your Python script by arranging blocks.</p>
         </div>
+        {/* Removed toggle button as per user request
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCodeVisualizer}
+            className="h-8 w-8" // Slightly larger for easier clicking
+            aria-label={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
+            title={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
+        >
+            {isCodeVisualizerVisible ? <PanelRightClose /> : <PanelRightOpen />}
+        </Button>
+        */}
       </header>
       <ScrollArea
         className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"
