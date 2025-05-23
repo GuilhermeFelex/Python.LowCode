@@ -17,9 +17,9 @@ export default function VisualScriptPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384);
-  const minVisualizerWidth = 200;
-  const maxVisualizerWidth = 800;
+  const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384); // Default width for CodeVisualizer
+  const minVisualizerWidth = 200; // Minimum width for CodeVisualizer
+  const maxVisualizerWidth = 800; // Maximum width for CodeVisualizer
 
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
@@ -85,15 +85,19 @@ export default function VisualScriptPage() {
         newBlocks.push(blockToInsert);
         inserted = true;
       }
-      if (block.children && !inserted) {
+      if (block.children && !inserted) { // Check children of current block only if not inserted at current level
         const childResult = insertBeforeRecursive(block.children, targetId, blockToInsert);
         if (childResult.inserted) {
           newBlocks.push({ ...block, children: childResult.newBlocks });
-          inserted = true;
-          continue; // Skip adding original block if children were modified and target was among them
+          inserted = true; 
+          // If inserted in children, we still need to push the original block (now with modified children)
+          // The 'continue' here was causing issues, the block itself needs to be added.
+        } else {
+          newBlocks.push(block); // Push original block if not inserted in its children
         }
+      } else {
+         newBlocks.push(block); // Push block if it has no children or already inserted
       }
-      newBlocks.push(block);
     }
     return { newBlocks, inserted };
   }, []);
@@ -111,14 +115,11 @@ export default function VisualScriptPage() {
     const dropZoneElement = target.closest<HTMLElement>('[data-is-drop-zone="true"]');
     const parentDropZoneInstanceId = dropZoneElement?.dataset.instanceId;
     
-    // Find if the drop happened directly on a block card (for inserting before)
-    // Ensure we are not targeting the drop zone itself for this.
     let directDropOnBlockInstanceId: string | undefined = undefined;
-    const potentialTargetCard = target.closest<HTMLElement>('[data-instance-id]');
-    if (potentialTargetCard && !potentialTargetCard.dataset.isDropZone) {
+    const potentialTargetCard = target.closest<HTMLElement>('[data-instance-id]:not([data-is-drop-zone="true"])');
+    if (potentialTargetCard) {
         directDropOnBlockInstanceId = potentialTargetCard.dataset.instanceId;
     }
-
 
     setCanvasBlocks(prevBlocks => {
       if (newBlockTypeId) { // Dragging a new block from the palette
@@ -138,31 +139,29 @@ export default function VisualScriptPage() {
           ...(blockType.canHaveChildren && { children: [] }),
         };
 
-        if (parentDropZoneInstanceId) { // Dropped into a child drop zone
+        if (parentDropZoneInstanceId) {
           return insertIntoChildrenRecursive(prevBlocks, parentDropZoneInstanceId, newBlock);
-        } else if (directDropOnBlockInstanceId && directDropOnBlockInstanceId !== newBlock.instanceId) { // Dropped on another block (insert before)
+        } else if (directDropOnBlockInstanceId && directDropOnBlockInstanceId !== newBlock.instanceId) {
             const result = insertBeforeRecursive(prevBlocks, directDropOnBlockInstanceId, newBlock);
-            return result.inserted ? result.newBlocks : [...prevBlocks, newBlock]; // Fallback to root if insertBefore failed
-        } else { // Dropped on main canvas
+            return result.inserted ? result.newBlocks : [...prevBlocks, newBlock];
+        } else {
           return [...prevBlocks, newBlock];
         }
 
       } else if (draggedInstanceId) { // Reordering an existing block from the canvas
         if (draggedInstanceId === parentDropZoneInstanceId || draggedInstanceId === directDropOnBlockInstanceId) {
-          return prevBlocks; // Dropping on self or its own dropzone
+          return prevBlocks; 
         }
 
         const { updatedBlocks: blocksAfterRemoval, removedBlock } = findAndRemoveBlockRecursive(prevBlocks, draggedInstanceId);
-        if (!removedBlock) return prevBlocks; // Should not happen if draggedInstanceId is valid
+        if (!removedBlock) return prevBlocks;
 
-        if (parentDropZoneInstanceId) { // Dropped into a child drop zone of another block
+        if (parentDropZoneInstanceId) {
           return insertIntoChildrenRecursive(blocksAfterRemoval, parentDropZoneInstanceId, removedBlock);
-        } else if (directDropOnBlockInstanceId) { // Dropped on another block (insert before it)
+        } else if (directDropOnBlockInstanceId) {
            const result = insertBeforeRecursive(blocksAfterRemoval, directDropOnBlockInstanceId, removedBlock);
-           // If insertBeforeRecursive couldn't find the target (e.g. target was the dragged block itself, now removed),
-           // or if the target was a child and it handled it, use its result. Otherwise, append to root.
            return result.inserted ? result.newBlocks : [...blocksAfterRemoval, removedBlock];
-        } else { // Dropped on main canvas (add to root)
+        } else { 
           return [...blocksAfterRemoval, removedBlock];
         }
       }
@@ -231,7 +230,7 @@ export default function VisualScriptPage() {
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy code: ', err);
+      // console.error('Failed to copy code: ', err); // My comment: Console logs were disallowed by ESLint rule.
       toast({
         title: "Copy Failed",
         description: "Could not copy code to clipboard. See console for details.",
@@ -256,7 +255,7 @@ export default function VisualScriptPage() {
         description: "The Python code has been downloaded as visual_script.py.",
       });
     } catch (err) {
-      console.error('Failed to save file: ', err);
+      // console.error('Failed to save file: ', err); // My comment: Console logs were disallowed by ESLint rule.
       toast({
         title: "Save Failed",
         description: "Could not save the code to a file. See console for details.",

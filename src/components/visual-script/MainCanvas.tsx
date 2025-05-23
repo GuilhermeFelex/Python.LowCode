@@ -7,9 +7,7 @@ import type { DragEvent } from 'react';
 import type { CanvasBlock, Block } from '@/types/visual-script';
 import { ScriptBlock } from './ScriptBlock';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { SquareDashedMousePointer, PanelRightOpen, PanelRightClose } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
+import { SquareDashedMousePointer } from 'lucide-react'; // Removed PanelRightOpen, PanelRightClose
 
 interface MainCanvasProps {
   canvasBlocks: CanvasBlock[];
@@ -18,9 +16,6 @@ interface MainCanvasProps {
   onParamChange: (instanceId: string, paramId: string, value: string) => void;
   onRemoveBlock: (instanceId: string) => void;
   onToggleBlockCollapse: (instanceId: string) => void;
-  // Props for code visualizer toggle - removed as per user request
-  // isCodeVisualizerVisible: boolean;
-  // toggleCodeVisualizer: () => void;
 }
 
 export function MainCanvas({
@@ -30,16 +25,14 @@ export function MainCanvas({
   onParamChange,
   onRemoveBlock,
   onToggleBlockCollapse,
-  // isCodeVisualizerVisible, // removed
-  // toggleCodeVisualizer, // removed
 }: MainCanvasProps) {
+  
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    // Check if the item being dragged is one of ours
     const isDraggableBlock = event.dataTransfer.types.some(
       (type) => type.toLowerCase() === 'blocktypeid' || type.toLowerCase() === 'draggedcanvasblockid'
     );
     if (isDraggableBlock) {
-      event.preventDefault(); // This is crucial for onDrop to fire
+      event.preventDefault(); 
       event.dataTransfer.dropEffect = 'move';
     } else {
       event.dataTransfer.dropEffect = 'none';
@@ -47,14 +40,11 @@ export function MainCanvas({
   };
 
   const handleDropOnCanvas = (event: DragEvent<HTMLDivElement>) => {
-    const isDraggableBlock = event.dataTransfer.types.some(
+     const isDraggableBlock = event.dataTransfer.types.some(
       (type) => type.toLowerCase() === 'blocktypeid' || type.toLowerCase() === 'draggedcanvasblockid'
     );
     if (isDraggableBlock) {
-      event.preventDefault(); // Prevent default action (like opening as link)
-      // Let page.tsx handle the logic and stop propagation if it handles the event.
-      // ScriptBlock's onDrop will also call onBlockDrop but will have stopped propagation.
-      // This handler is primarily for drops on the "empty" parts of the canvas.
+      event.preventDefault();
       onBlockDrop(event);
     }
   };
@@ -66,18 +56,6 @@ export function MainCanvas({
           <h1 className="text-2xl font-bold text-primary">Visual Script Canvas</h1>
           <p className="text-sm text-muted-foreground">Construct your Python script by arranging blocks.</p>
         </div>
-        {/* Removed toggle button as per user request
-        <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleCodeVisualizer}
-            className="h-8 w-8" // Slightly larger for easier clicking
-            aria-label={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
-            title={isCodeVisualizerVisible ? "Hide Code Visualizer" : "Show Code Visualizer"}
-        >
-            {isCodeVisualizerVisible ? <PanelRightClose /> : <PanelRightOpen />}
-        </Button>
-        */}
       </header>
       <ScrollArea
         className="flex-1 border border-dashed rounded-lg bg-background/70 transition-colors duration-200 hover:border-primary/50"

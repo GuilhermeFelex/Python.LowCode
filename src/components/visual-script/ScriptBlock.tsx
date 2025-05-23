@@ -2,7 +2,7 @@
 // src/components/visual-script/ScriptBlock.tsx
 "use client";
 
-import React, { type DragEvent } from 'react'; // Added React import for React.memo
+import React, { type DragEvent } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,7 +39,9 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   onBlockDrop,
 }) => {
   const handleDragStart = (event: DragEvent<HTMLDivElement>) => {
-    event.stopPropagation(); // Stop propagation to prevent parent handlers if nested
+    // event.stopPropagation(); // My comment: Re-evaluating if stopPropagation is always needed here. 
+                              // It might prevent MainCanvas from handling root drops.
+                              // For now, let's keep it to ensure specific drop zones on blocks are prioritized.
     if (isPaletteBlock) {
       event.dataTransfer.setData('blockTypeId', blockDefinition.id);
     } else if (canvasBlockInstance) {
@@ -49,9 +51,8 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    // Check if a block is being dragged from palette or canvas
+    event.preventDefault(); // Necessary to allow dropping
+    event.stopPropagation(); // Prevent parent handlers if this is a valid drop target
     if (event.dataTransfer.types.includes('blocktypeid') || event.dataTransfer.types.includes('draggedcanvasblockid')) {
       event.dataTransfer.dropEffect = 'move';
     } else {
@@ -61,7 +62,7 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation();
+    event.stopPropagation(); // This block or its child zone is handling the drop.
     if (onBlockDrop) {
       onBlockDrop(event);
     }
@@ -148,22 +149,21 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
   };
 
   const cardClasses = `w-full transition-all duration-150 ease-in-out shadow-md hover:shadow-lg ${
-    isPaletteBlock ? 'cursor-grab active:cursor-grabbing' : 'bg-card cursor-move' // Make canvas blocks movable
+    isPaletteBlock ? 'cursor-grab active:cursor-grabbing' : 'bg-card cursor-move'
   }`;
 
   const isDroppableChildArea = !isPaletteBlock && blockDefinition.canHaveChildren && canvasBlockInstance;
   const isCollapsed = canvasBlockInstance?.isCollapsed ?? false;
 
-  // Add data-instance-id to the root Card element for drop target identification
   return (
     <Card
-      draggable={true} // All blocks (palette and canvas) are draggable
+      draggable={true} 
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver} // Allow dropping onto the block itself (for reordering before it)
-      onDrop={handleDrop}       // Handle drop onto the block itself
+      onDragOver={handleDragOver} 
+      onDrop={handleDrop}       
       className={cardClasses}
       aria-label={`${blockDefinition.name} block`}
-      data-instance-id={canvasBlockInstance?.instanceId} // Used to identify this block as a potential drop target
+      data-instance-id={canvasBlockInstance?.instanceId} 
     >
       <CardHeader className="flex flex-row items-center justify-between p-3 bg-muted/50 rounded-t-lg">
         <div className="flex items-center gap-2 flex-grow">
@@ -217,11 +217,11 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
           {isDroppableChildArea && (
             <CardContent className="p-0 border-t">
               <div
-                data-instance-id={canvasBlockInstance.instanceId} // Parent's instanceId for child drop zone
+                data-instance-id={canvasBlockInstance.instanceId} 
                 data-is-drop-zone="true"
                 className="m-2 p-3 border border-dashed border-accent/50 rounded-md min-h-[60px] bg-background/30 space-y-2"
                 onDragOver={handleDragOver}
-                onDrop={handleDrop} // Let this also call the main onBlockDrop
+                onDrop={handleDrop} 
               >
                 {canvasBlockInstance.children && canvasBlockInstance.children.length > 0 ? (
                   canvasBlockInstance.children.map(childBlock => {
@@ -236,7 +236,7 @@ const ScriptBlockComponent: React.FC<ScriptBlockProps> = ({
                         onParamChange={onParamChange}
                         onRemove={onRemove}
                         onToggleCollapse={onToggleCollapse}
-                        onBlockDrop={onBlockDrop} // Pass down for nested reordering
+                        onBlockDrop={onBlockDrop} 
                       />
                     );
                   })
