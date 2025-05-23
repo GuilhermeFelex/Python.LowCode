@@ -119,7 +119,7 @@ export function BlockPanel({
 
             return (
               <AccordionItem value={category} key={category} className="border-b-0 mb-2 last:mb-0">
-                <AccordionTrigger className="py-2 px-3 rounded-md hover:bg-muted/50 hover:no-underline text-sm font-medium text-muted-foreground [&[data-state=open]>svg]:text-primary">
+                <AccordionTrigger className="py-2 px-3 rounded-md hover:bg-muted/50 hover:no-underline text-sm font-medium text-muted-foreground uppercase tracking-wider [&[data-state=open]>svg]:text-primary">
                   <div className="flex items-center justify-between w-full">
                     <span>{category}</span>
                     <Badge variant="secondary" className="ml-2">
