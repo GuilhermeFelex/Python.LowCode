@@ -9,6 +9,8 @@ import { CodeVisualizer } from '@/components/visual-script/CodeVisualizer';
 import type { CanvasBlock } from '@/types/visual-script';
 import { AVAILABLE_BLOCKS, generatePythonCode } from '@/lib/visual-script-utils';
 import { useToast } from "@/hooks/use-toast";
+import { PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function VisualScriptPage() {
   const [canvasBlocks, setCanvasBlocks] = useState<CanvasBlock[]>([]);
@@ -20,6 +22,8 @@ export default function VisualScriptPage() {
   const [codeVisualizerWidth, setCodeVisualizerWidth] = useState(384); // Default width for CodeVisualizer
   const minVisualizerWidth = 200; // Minimum width for CodeVisualizer
   const maxVisualizerWidth = 800; // Maximum width for CodeVisualizer
+  // const [isCodeVisualizerVisible, setIsCodeVisualizerVisible] = useState(true); // State to control visibility
+
 
   const isResizing = useRef(false);
   const dragStartX = useRef(0);
@@ -150,18 +154,22 @@ export default function VisualScriptPage() {
 
       } else if (draggedInstanceId) { // Reordering an existing block from the canvas
         if (draggedInstanceId === parentDropZoneInstanceId || draggedInstanceId === directDropOnBlockInstanceId) {
+          // Prevent dropping a block onto itself or its own direct drop zone (which would be an infinite loop or no-op)
           return prevBlocks; 
         }
 
         const { updatedBlocks: blocksAfterRemoval, removedBlock } = findAndRemoveBlockRecursive(prevBlocks, draggedInstanceId);
-        if (!removedBlock) return prevBlocks;
+        if (!removedBlock) return prevBlocks; // Block to drag not found, should not happen if drag started correctly
 
         if (parentDropZoneInstanceId) {
+          // Dropping into a child zone of another block
           return insertIntoChildrenRecursive(blocksAfterRemoval, parentDropZoneInstanceId, removedBlock);
         } else if (directDropOnBlockInstanceId) {
+          // Dropping onto another block (to insert before it)
            const result = insertBeforeRecursive(blocksAfterRemoval, directDropOnBlockInstanceId, removedBlock);
-           return result.inserted ? result.newBlocks : [...blocksAfterRemoval, removedBlock];
+           return result.inserted ? result.newBlocks : [...blocksAfterRemoval, removedBlock]; // Fallback to end if insertBefore fails
         } else { 
+          // Dropping onto the main canvas (root level)
           return [...blocksAfterRemoval, removedBlock];
         }
       }
@@ -230,10 +238,9 @@ export default function VisualScriptPage() {
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      // console.error('Failed to copy code: ', err); // My comment: Console logs were disallowed by ESLint rule.
       toast({
         title: "Copy Failed",
-        description: "Could not copy code to clipboard. See console for details.",
+        description: "Could not copy code to clipboard.",
         variant: "destructive",
       });
     }
@@ -255,10 +262,9 @@ export default function VisualScriptPage() {
         description: "The Python code has been downloaded as visual_script.py.",
       });
     } catch (err) {
-      // console.error('Failed to save file: ', err); // My comment: Console logs were disallowed by ESLint rule.
       toast({
         title: "Save Failed",
-        description: "Could not save the code to a file. See console for details.",
+        description: "Could not save the code to a file.",
         variant: "destructive",
       });
     }
@@ -304,6 +310,10 @@ export default function VisualScriptPage() {
     };
   }, [isClient, minVisualizerWidth, maxVisualizerWidth]);
 
+  // const toggleCodeVisualizer = useCallback(() => {
+  //   setIsCodeVisualizerVisible(prev => !prev);
+  // }, []);
+
 
   if (!isClient) {
     return null;
@@ -316,6 +326,8 @@ export default function VisualScriptPage() {
         onCopyCode={handleCopyCode}
         onSaveFile={handleSaveToFile}
         isCodeCopied={copied}
+        // isCodeVisualizerVisible={isCodeVisualizerVisible}
+        // toggleCodeVisualizer={toggleCodeVisualizer}
       />
       <MainCanvas
         canvasBlocks={canvasBlocks}
@@ -324,6 +336,8 @@ export default function VisualScriptPage() {
         onParamChange={handleParamChange}
         onRemoveBlock={handleRemoveBlock}
         onToggleBlockCollapse={handleToggleBlockCollapse}
+        // isCodeVisualizerVisible={isCodeVisualizerVisible} 
+        // toggleCodeVisualizer={toggleCodeVisualizer}
       />
       <>
         <div
