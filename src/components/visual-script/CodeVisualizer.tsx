@@ -1,5 +1,9 @@
 
 // src/components/visual-script/CodeVisualizer.tsx
+/**
+ * @fileoverview Componente que exibe o código Python gerado em tempo real.
+ * Permite rolagem e destaca comentários. Sua largura pode ser ajustada.
+ */
 "use client";
 
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,26 +15,31 @@ interface CodeVisualizerProps {
   width: number;
 }
 
+// Regex simples pra identificar linhas de comentário.
 const COMMENT_REGEX = /^\s*#/;
 
 export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
   const [displayCode, setDisplayCode] = useState(code);
   const [isFading, setIsFading] = useState(false);
 
+  // Efeito pra suavizar a transição quando o código muda.
+  // Eu poderia só atualizar direto, mas um fadezinho fica mais legal.
   useEffect(() => {
     setIsFading(true);
     const timer = setTimeout(() => {
       setDisplayCode(code);
       setIsFading(false);
-    }, 150); 
+    }, 150); // Um delay pequeno pra dar tempo do fade.
     return () => clearTimeout(timer);
   }, [code]);
 
+  // Formato as linhas de código, aplicando a classe de comentário se necessário.
+  // Memoizado pra só reprocessar se o `displayCode` mudar.
   const formattedCodeLines = useMemo(() => {
     return displayCode.split('\n').map((line, index) => {
       if (COMMENT_REGEX.test(line)) {
         return (
-          <span key={index} className="text-comment">
+          <span key={index} className="text-comment"> {/* Classe pro CSS pegar */}
             {line}
           </span>
         );
@@ -42,12 +51,12 @@ export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
   return (
     <aside 
       className="h-full border-l bg-card flex flex-col shadow-lg overflow-hidden"
-      style={{ width: `${width}px`, minWidth: `${width}px` }} // Apply dynamic width
-      aria-live="polite"
+      style={{ width: `${width}px`, minWidth: `${width}px` }} // Aplico a largura dinâmica.
+      aria-live="polite" // Pra leitores de tela anunciarem mudanças no código.
     >
       <CardHeader className="border-b flex-shrink-0">
-        <CardTitle className="text-lg font-semibold text-foreground">Code Visualizer</CardTitle>
-        <p className="text-xs text-muted-foreground">Real-time Python code generation</p>
+        <CardTitle className="text-lg font-semibold text-foreground">Visualizador de Código</CardTitle>
+        <p className="text-xs text-muted-foreground">Geração de código Python em tempo real</p>
       </CardHeader>
       <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
         <ScrollArea className="flex-1">
@@ -63,4 +72,3 @@ export function CodeVisualizer({ code, width }: CodeVisualizerProps) {
     </aside>
   );
 }
-
