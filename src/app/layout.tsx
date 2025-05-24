@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR"> {/* Alterado para pt-BR para melhor acessibilidade */}
+    <html lang="pt-BR">{/* Alterado para pt-BR para melhor acessibilidade */}
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster /> {/* Componente para exibir notificações (toasts) */}
